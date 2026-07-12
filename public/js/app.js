@@ -38,3 +38,4 @@ document.getElementById('logout')?.addEventListener('click', async () => {
 // panel modules are imported here as they land
 import './player.js';
 import './visualizer.js';
+import './feed.js';

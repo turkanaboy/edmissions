@@ -52,6 +52,26 @@ export function makeMusicDir(files = ['sunset drive.mp3', 'neon rain.mp3']) {
   return dir;
 }
 
+// Intercept matching outbound calls while passing everything else (e.g. localhost app
+// traffic) through to the real fetch.
+export function stubFetch(match, impl) {
+  const real = globalThis.fetch;
+  globalThis.fetch = (input, opts) => {
+    const url = String(input);
+    if (match(url)) {
+      try {
+        return Promise.resolve(impl(url, opts));
+      } catch (err) {
+        return Promise.reject(err);
+      }
+    }
+    return real(input, opts);
+  };
+  return () => {
+    globalThis.fetch = real;
+  };
+}
+
 // Intercept outbound Jamendo calls while passing localhost app traffic through untouched.
 export function stubJamendo(impl) {
   const real = globalThis.fetch;
