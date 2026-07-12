@@ -1,0 +1,178 @@
+import { api, el } from './app.js';
+
+export const audio = new Audio();
+audio.preload = 'none';
+audio.volume = 0.8;
+
+const state = { mode: 'off', queue: [], index: -1, fallback: null, loading: false };
+const root = document.getElementById('player-root');
+const listeners = new Set();
+let errorStreak = 0;
+
+export function onPlayerEvent(fn) {
+  listeners.add(fn);
+}
+export function getMode() {
+  return state.mode;
+}
+const emit = (type) => listeners.forEach((fn) => fn(type, state));
+
+const current = () => state.queue[state.index] || null;
+
+async function play(i) {
+  if (!state.queue.length) return;
+  state.index = ((i % state.queue.length) + state.queue.length) % state.queue.length;
+  audio.src = current().audio;
+  try {
+    await audio.play();
+  } catch {
+    /* autoplay guard or dead stream; the error handler advances */
+  }
+  render();
+  emit('track');
+}
+
+audio.addEventListener('playing', () => {
+  errorStreak = 0;
+  render();
+});
+audio.addEventListener('pause', render);
+audio.addEventListener('ended', () => play(state.index + 1));
+audio.addEventListener('error', () => {
+  errorStreak += 1;
+  if (state.queue.length > 1 && errorStreak < state.queue.length) play(state.index + 1);
+});
+
+export async function setMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll('#mode-bar button').forEach((b) => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  emit('mode');
+  if (mode === 'off') {
+    audio.pause();
+    render();
+    return;
+  }
+  state.loading = true;
+  render();
+  try {
+    const result = await api(`/api/music/browse?mode=${encodeURIComponent(mode)}`);
+    state.queue = result.tracks;
+    state.fallback = result.source === 'local' ? result.fallback || 'local library' : null;
+    state.loading = false;
+    if (!state.queue.length) {
+      state.index = -1;
+      render();
+      return;
+    }
+    await play(0);
+  } catch (err) {
+    state.loading = false;
+    state.queue = [];
+    state.fallback = err.message;
+    render();
+  }
+}
+
+async function runSearch(q) {
+  state.loading = true;
+  render();
+  try {
+    const result = await api(`/api/music/search?q=${encodeURIComponent(q)}`);
+    state.queue = result.tracks;
+    state.fallback = result.source === 'local' ? 'local library' : null;
+    state.loading = false;
+    if (state.queue.length) await play(0);
+    else render();
+  } catch (err) {
+    state.loading = false;
+    state.fallback = err.message;
+    render();
+  }
+}
+
+function render() {
+  const track = current();
+  const upNext = state.queue.slice(state.index + 1, state.index + 4);
+  root.replaceChildren(
+    state.loading ? el('p', { class: 'muted', text: 'Tuning in…' }) : null,
+    !state.loading && state.mode === 'off' && !track
+      ? el('p', { class: 'muted', text: 'Pick a mode to start the music.' })
+      : null,
+    track
+      ? el(
+          'div',
+          { class: 'stack' },
+          el('div', {}, el('strong', { text: track.name }), el('div', { class: 'meta muted', text: track.artist })),
+          state.fallback ? el('span', { class: 'pill badge', text: `⟂ ${state.fallback}` }) : null
+        )
+      : null,
+    el(
+      'div',
+      { class: 'row', style: 'margin-top:.6rem' },
+      el('button', { class: 'btn', title: 'Previous', onclick: () => play(state.index - 1), text: '⏮' }),
+      el('button', {
+        class: 'btn btn-neon',
+        title: 'Play / pause',
+        text: audio.paused ? '▶' : '⏸',
+        onclick: () => {
+          if (audio.paused) {
+            if (track) audio.play().catch(() => {});
+            else if (state.mode !== 'off') setMode(state.mode);
+          } else audio.pause();
+        },
+      }),
+      el('button', { class: 'btn', title: 'Skip', onclick: () => play(state.index + 1), text: '⏭' }),
+      el('input', {
+        type: 'range',
+        min: '0',
+        max: '1',
+        step: '0.05',
+        value: String(audio.volume),
+        style: 'width:90px',
+        oninput: (e) => {
+          audio.volume = Number(e.target.value);
+        },
+      })
+    ),
+    el(
+      'form',
+      {
+        class: 'row',
+        style: 'margin-top:.6rem',
+        onsubmit: (e) => {
+          e.preventDefault();
+          const q = e.target.q.value.trim();
+          if (q) runSearch(q);
+        },
+      },
+      el('input', { name: 'q', placeholder: 'search open-source EDM…' }),
+      el('button', { class: 'btn', text: 'Go' })
+    ),
+    upNext.length
+      ? el(
+          'div',
+          { style: 'margin-top:.6rem' },
+          el('div', { class: 'meta muted', text: 'Up next' }),
+          ...upNext.map((t, i) =>
+            el('div', { class: 'list-item' }, el('a', {
+              href: '#',
+              text: `${t.name} — ${t.artist}`,
+              onclick: (e) => {
+                e.preventDefault();
+                play(state.index + 1 + i);
+              },
+            }))
+          )
+        )
+      : null
+  );
+}
+
+document.getElementById('mode-bar').addEventListener('click', (e) => {
+  const mode = e.target.dataset?.mode;
+  if (mode) setMode(mode); // the click is the user gesture that unlocks audio playback
+});
+
+render();

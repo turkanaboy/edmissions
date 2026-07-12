@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config.js';
 import { openDb } from './db.js';
 import { createAuth } from './auth.js';
+import { musicRoutes } from './routes/music.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -30,7 +31,8 @@ export function createApp(config = loadConfig()) {
 
   app.get('/api/capabilities', (req, res) => res.json({ ai: Boolean(config.anthropicKey) }));
 
-  // panel routes are mounted here as they land (music, feed, notes, campaigns, tasks, ai)
+  app.use('/api/music', musicRoutes(config));
+  // remaining panel routes are mounted here as they land (feed, notes, campaigns, tasks, ai)
 
   app.use(express.static(path.join(__dirname, '..', 'public')));
 
