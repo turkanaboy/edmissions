@@ -6,6 +6,9 @@ import { openDb } from './db.js';
 import { createAuth } from './auth.js';
 import { musicRoutes } from './routes/music.js';
 import { feedRoutes } from './routes/feed.js';
+import { notesRoutes } from './routes/notes.js';
+import { campaignRoutes, seedTemplates } from './routes/campaigns.js';
+import { taskRoutes } from './routes/tasks.js';
 import { startPolling } from './poller.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -15,6 +18,7 @@ export function createApp(config = loadConfig()) {
   if (config.trustProxy) app.set('trust proxy', 1);
 
   const db = openDb(config.dataDir);
+  seedTemplates(db, config);
   const auth = createAuth(config);
   app.locals.db = db;
   app.locals.config = config;
@@ -31,11 +35,16 @@ export function createApp(config = loadConfig()) {
     return auth.requireAuth(req, res, next);
   });
 
-  app.get('/api/capabilities', (req, res) => res.json({ ai: Boolean(config.anthropicKey) }));
+  app.get('/api/capabilities', (req, res) =>
+    res.json({ ai: Boolean(config.anthropicKey), subjects: config.content.subjects })
+  );
 
   app.use('/api/music', musicRoutes(config));
   app.use('/api/articles', feedRoutes());
-  // remaining panel routes are mounted here as they land (notes, campaigns, tasks, ai)
+  app.use('/api/notes', notesRoutes());
+  app.use('/api/campaigns', campaignRoutes());
+  app.use('/api/tasks', taskRoutes());
+  // the AI routes (summarize, generate) are mounted here in U7
 
   app.use(express.static(path.join(__dirname, '..', 'public')));
 

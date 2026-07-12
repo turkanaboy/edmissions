@@ -39,3 +39,6 @@ document.getElementById('logout')?.addEventListener('click', async () => {
 import './player.js';
 import './visualizer.js';
 import './feed.js';
+import './notes.js';
+import './campaigns.js';
+import './tasks.js';

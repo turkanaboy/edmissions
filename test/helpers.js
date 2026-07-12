@@ -14,7 +14,7 @@ export function bootApp(envOverrides = {}) {
   const app = createApp(config);
   const server = app.listen(0);
   const base = `http://127.0.0.1:${server.address().port}`;
-  return { server, base, config };
+  return { server, base, config, app };
 }
 
 export async function login(base) {

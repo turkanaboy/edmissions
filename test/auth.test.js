@@ -39,7 +39,7 @@ test('valid login sets a guarded session cookie and grants API access', async ()
       headers: { cookie: cookie.split(';')[0] },
     });
     assert.equal(caps.status, 200);
-    assert.deepEqual(await caps.json(), { ai: false });
+    assert.equal((await caps.json()).ai, false);
   } finally {
     server.close();
   }
