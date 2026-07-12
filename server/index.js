@@ -28,7 +28,14 @@ export function createApp(config = loadConfig()) {
 
   app.use(express.json({ limit: '1mb' }));
 
-  app.get('/healthz', (req, res) => res.json({ ok: true }));
+  app.get('/healthz', (req, res) => {
+    try {
+      db.prepare('SELECT 1').get(); // fail the Docker health check if the DB is unreadable
+      res.json({ ok: true });
+    } catch {
+      res.status(503).json({ ok: false });
+    }
+  });
   app.post('/api/login', auth.login);
   app.post('/api/logout', auth.logout);
 
@@ -50,6 +57,14 @@ export function createApp(config = loadConfig()) {
   app.use('/api', aiRoutes());
 
   app.use(express.static(path.join(__dirname, '..', 'public')));
+
+  // Central handler: any thrown/rejected route error becomes a clean 502 instead of
+  // Express 5's default, which leaks a stack trace whenever NODE_ENV isn't 'production'.
+  app.use((err, req, res, next) => {
+    console.error(`[server] ${req.method} ${req.path}: ${err.message || err}`);
+    if (res.headersSent) return next(err);
+    res.status(502).json({ error: 'Something went wrong' });
+  });
 
   return app;
 }

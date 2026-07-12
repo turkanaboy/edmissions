@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
 import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 
 const JAMENDO = 'https://api.jamendo.com/v3.0';
 const AUDIO_EXT = /\.(mp3|ogg|m4a|flac|wav|webm)$/i;
@@ -132,7 +133,11 @@ export function musicRoutes(config) {
 
     const headers = {};
     if (req.headers.range) headers.range = req.headers.range;
-    const upstream = await fetch(audioUrl, { headers, redirect: 'follow' }).catch(() => null);
+    const upstream = await fetch(audioUrl, {
+      headers,
+      redirect: 'follow',
+      signal: AbortSignal.timeout(20_000),
+    }).catch(() => null);
     if (!upstream || !upstream.ok) return res.status(502).json({ error: 'Upstream audio failed' });
     if (Number(upstream.headers.get('content-length') || 0) > MAX_AUDIO_BYTES) {
       return res.status(502).json({ error: 'Upstream response too large' });
@@ -144,7 +149,14 @@ export function musicRoutes(config) {
       if (v) res.setHeader(h, v);
     }
     if (!upstream.headers.get('accept-ranges')) res.setHeader('accept-ranges', 'bytes');
-    Readable.fromWeb(upstream.body).pipe(res);
+    // pipeline (not bare .pipe) forwards stream errors and destroys both sides, so an
+    // upstream reset or a client disconnect mid-stream can't throw an uncaught exception.
+    try {
+      await pipeline(Readable.fromWeb(upstream.body), res);
+    } catch {
+      if (!res.headersSent) res.status(502).json({ error: 'Audio stream failed' });
+      else res.destroy();
+    }
   });
 
   return router;

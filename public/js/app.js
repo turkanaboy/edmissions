@@ -16,6 +16,10 @@ export async function api(path, opts = {}) {
 }
 
 // Tiny DOM helper: build an element with textContent only (never innerHTML for remote data)
+// Only http(s), root/relative, and fragment hrefs — blanks javascript:/data:/vbscript:
+// so an untrusted feed or note link can't become a script-executing click target.
+const safeHref = (v) => (/^(https?:\/\/|\/|#|\.\/|\.\.\/)/i.test(String(v)) ? v : '#');
+
 export function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -23,6 +27,7 @@ export function el(tag, attrs = {}, ...children) {
     if (k === 'class') node.className = v;
     else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
     else if (k === 'text') node.textContent = v;
+    else if (k === 'href') node.setAttribute('href', safeHref(v));
     else node.setAttribute(k, v === true ? '' : v);
   }
   node.append(...children.filter(Boolean));

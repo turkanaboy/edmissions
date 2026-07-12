@@ -134,6 +134,24 @@ test('audio proxy forwards Range and relays 206 with headers', async () => {
   }
 });
 
+test('audio proxy returns 502 when the upstream stream fails', async () => {
+  const { server, base } = bootApp(CID);
+  const restore = stubJamendo((url) => {
+    if (url.includes('api.jamendo.com')) return jamendoEnvelope([jamendoTrack(88)]);
+    return new Response('', { status: 500 }); // upstream audio not ok
+  });
+  try {
+    const s = await login(base);
+    await s.get('/api/music/browse?mode=chill'); // prime the cache
+    const res = await s.get('/api/music/audio/88');
+    assert.equal(res.status, 502);
+    assert.match((await res.json()).error, /Upstream audio failed/);
+  } finally {
+    restore();
+    server.close();
+  }
+});
+
 test('audio proxy refuses non-Jamendo hosts', async () => {
   const { server, base } = bootApp(CID);
   const restore = stubJamendo((url) => {

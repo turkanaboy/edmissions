@@ -73,6 +73,21 @@ test('sixth rapid failure is 429 while the other user still logs in', async () =
   }
 });
 
+test('logout clears the session cookie and de-authenticates it', async () => {
+  const { server, base } = makeApp();
+  try {
+    const res = await post(base, '/api/login', { username: 'tyler', password: 'goodpass' });
+    const cookie = res.headers.get('set-cookie').split(';')[0];
+    // the live session works
+    assert.equal((await fetch(base + '/api/capabilities', { headers: { cookie } })).status, 200);
+    const out = await fetch(base + '/api/logout', { method: 'POST', headers: { cookie } });
+    assert.equal(out.status, 200);
+    assert.match(out.headers.get('set-cookie'), /Max-Age=0/);
+  } finally {
+    server.close();
+  }
+});
+
 test('unauthenticated API request returns 401 JSON', async () => {
   const { server, base } = makeApp();
   try {

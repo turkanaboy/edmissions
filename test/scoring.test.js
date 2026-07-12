@@ -56,3 +56,10 @@ test('items fall back to guid when link is missing and drop when both absent', (
   assert.equal(normalizeItem({ title: 'T', guid: 'https://x.com/g' }, feed).link, 'https://x.com/g');
   assert.equal(normalizeItem({ title: 'T' }, feed).link, '');
 });
+
+test('non-http(s) links are dropped at ingest (javascript:/data: XSS guard)', () => {
+  const feed = { name: 'X', url: 'https://x.com/rss' };
+  assert.equal(normalizeItem({ title: 'T', link: 'javascript:alert(1)' }, feed).link, '');
+  assert.equal(normalizeItem({ title: 'T', link: 'data:text/html,<script>' }, feed).link, '');
+  assert.equal(normalizeItem({ title: 'T', link: 'http://ok.example/a' }, feed).link, 'http://ok.example/a');
+});

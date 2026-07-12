@@ -27,7 +27,12 @@ export function feedRoutes() {
   });
 
   router.post('/poll', async (req, res) => {
-    res.json(await pollOnce(req.app.locals.db, req.app.locals.config));
+    try {
+      res.json(await pollOnce(req.app.locals.db, req.app.locals.config));
+    } catch (err) {
+      console.error(`[feed] manual poll failed: ${err.message || err}`);
+      res.status(502).json({ error: 'Feed poll failed' });
+    }
   });
 
   return router;

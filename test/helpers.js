@@ -73,23 +73,7 @@ export function stubFetch(match, impl) {
 }
 
 // Intercept outbound Jamendo calls while passing localhost app traffic through untouched.
-export function stubJamendo(impl) {
-  const real = globalThis.fetch;
-  globalThis.fetch = (input, opts) => {
-    const url = String(input);
-    if (url.includes('jamendo.com')) {
-      try {
-        return Promise.resolve(impl(url, opts));
-      } catch (err) {
-        return Promise.reject(err);
-      }
-    }
-    return real(input, opts);
-  };
-  return () => {
-    globalThis.fetch = real;
-  };
-}
+export const stubJamendo = (impl) => stubFetch((url) => url.includes('jamendo.com'), impl);
 
 export const jamendoEnvelope = (tracks) =>
   new Response(JSON.stringify({ headers: { status: 'success' }, results: tracks }), {

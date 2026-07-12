@@ -51,6 +51,9 @@ export function createAuth(config) {
   const login = (req, res) => {
     const { username, password } = req.body || {};
     const key = `${req.ip}|${username}`;
+    // sweep expired entries so username rotation can't grow the Map unbounded
+    const now0 = Date.now();
+    for (const [k, v] of attempts) if (now0 >= v.resetAt) attempts.delete(k);
     const failed = attempts.get(key);
     if (failed && failed.count >= MAX_FAILS && Date.now() < failed.resetAt) {
       return res.status(429).json({ error: 'Too many attempts — try again in a few minutes' });
@@ -71,7 +74,8 @@ export function createAuth(config) {
   };
 
   const logout = (req, res) => {
-    res.setHeader('Set-Cookie', `edm_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+    // reuse cookieAttrs() so flags can't drift between the login and logout cookies
+    res.setHeader('Set-Cookie', `edm_session=; ${cookieAttrs().replace(/Max-Age=\d+/, 'Max-Age=0')}`);
     res.json({ ok: true });
   };
 

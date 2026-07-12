@@ -31,10 +31,12 @@ export function normalizeItem(item, feed) {
     title = title.replace(/\s+-\s+[^-]+$/, '');
     excerpt = '';
   }
+  const link = item.link || item.guid || '';
   return {
     source: feed.name,
     title,
-    link: item.link || item.guid || '',
+    // drop non-http(s) links at ingest so a hostile feed can't store a javascript: URL
+    link: /^https?:\/\//i.test(link) ? link : '',
     excerpt: excerpt.slice(0, 400), // excerpt only — full article text is never stored (R9)
     published_at: item.isoDate || item.pubDate || null,
   };
@@ -76,6 +78,10 @@ export function startPolling(db, config) {
     inFlight = true;
     try {
       await pollOnce(db, config);
+    } catch (err) {
+      // pollOnce isolates per-feed failures; this catches anything above that loop
+      // (e.g. a prepared-statement error) so a background tick can never crash the process
+      console.error(`[poller] tick failed: ${err.message || err}`);
     } finally {
       inFlight = false;
     }

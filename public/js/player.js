@@ -8,12 +8,10 @@ const state = { mode: 'off', queue: [], index: -1, fallback: null, loading: fals
 const root = document.getElementById('player-root');
 const listeners = new Set();
 let errorStreak = 0;
+let opId = 0; // bumps on each mode switch / search so a stale fetch can't overwrite the queue
 
 export function onPlayerEvent(fn) {
   listeners.add(fn);
-}
-export function getMode() {
-  return state.mode;
 }
 const emit = (type) => listeners.forEach((fn) => fn(type, state));
 
@@ -44,6 +42,8 @@ audio.addEventListener('error', () => {
 });
 
 export async function setMode(mode) {
+  const myOp = ++opId;
+  errorStreak = 0;
   state.mode = mode;
   document.querySelectorAll('#mode-bar button').forEach((b) => {
     b.classList.toggle('active', b.dataset.mode === mode);
@@ -58,6 +58,7 @@ export async function setMode(mode) {
   render();
   try {
     const result = await api(`/api/music/browse?mode=${encodeURIComponent(mode)}`);
+    if (myOp !== opId) return; // a newer mode/search superseded this one
     state.queue = result.tracks;
     state.fallback = result.source === 'local' ? result.fallback || 'local library' : null;
     state.loading = false;
@@ -68,6 +69,7 @@ export async function setMode(mode) {
     }
     await play(0);
   } catch (err) {
+    if (myOp !== opId) return;
     state.loading = false;
     state.queue = [];
     state.fallback = err.message;
@@ -76,16 +78,20 @@ export async function setMode(mode) {
 }
 
 async function runSearch(q) {
+  const myOp = ++opId;
+  errorStreak = 0;
   state.loading = true;
   render();
   try {
     const result = await api(`/api/music/search?q=${encodeURIComponent(q)}`);
+    if (myOp !== opId) return;
     state.queue = result.tracks;
     state.fallback = result.source === 'local' ? 'local library' : null;
     state.loading = false;
     if (state.queue.length) await play(0);
     else render();
   } catch (err) {
+    if (myOp !== opId) return;
     state.loading = false;
     state.fallback = err.message;
     render();

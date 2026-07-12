@@ -1,4 +1,4 @@
-import { api, el, capabilities } from './app.js';
+import { api, el, mount, capabilities } from './app.js';
 
 const root = document.getElementById('notes-root');
 const state = { notes: [], filterTag: null, editing: null, busy: false, error: null };
@@ -61,11 +61,11 @@ document.addEventListener('edm:add-to-note', async (e) => {
     method: 'POST',
     body: JSON.stringify({ body: prefill, tags: [], article_id: a.id }),
   }).catch(() => null);
-  if (saved) {
-    state.editing = { ...saved };
-    render();
-    load();
-  }
+  if (!saved) return;
+  // don't stomp an open unsaved draft — the note is saved regardless; only
+  // steal the editor when it's free
+  if (!state.editing) state.editing = { ...saved };
+  load();
 });
 
 function editorView() {
@@ -181,7 +181,7 @@ function listView() {
 }
 
 function render() {
-  root.replaceChildren(state.editing ? editorView() : listView());
+  mount(root, state.editing ? editorView() : listView());
 }
 
 export function init() {

@@ -2,13 +2,16 @@ import { api, el, mount } from './app.js';
 
 const root = document.getElementById('feed-root');
 const state = { starredOnly: false, articles: [], loading: true, polledOnEmpty: false };
+let loadId = 0; // a fast All/Starred toggle or double-click can't let a stale response win
 
 async function load() {
+  const myLoad = ++loadId;
   state.loading = true;
   render();
   try {
     const qs = state.starredOnly ? '?starred=1' : '';
     const data = await api('/api/articles' + qs);
+    if (myLoad !== loadId) return;
     state.articles = data.articles;
     state.loading = false;
     // fresh instance: trigger the first poll ourselves instead of showing a blank panel
@@ -19,6 +22,7 @@ async function load() {
       return load();
     }
   } catch {
+    if (myLoad !== loadId) return;
     state.loading = false;
   }
   render();

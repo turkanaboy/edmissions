@@ -1,4 +1,4 @@
-import { api, el, capabilities } from './app.js';
+import { api, el, mount, capabilities } from './app.js';
 
 const root = document.getElementById('campaigns-root');
 const state = {
@@ -41,12 +41,14 @@ async function submit(kind) {
   }
 }
 
+let copyTimer = null;
 async function copyOutput() {
   try {
     await navigator.clipboard.writeText(state.viewing.output);
     state.copied = true;
     render();
-    setTimeout(() => {
+    clearTimeout(copyTimer); // a second click restarts the window instead of racing two reverts
+    copyTimer = setTimeout(() => {
       state.copied = false;
       render();
     }, 1800);
@@ -122,10 +124,14 @@ function formView() {
           el('textarea', { rows: '6', text: currentTemplate().body, oninput: (e) => (currentTemplate().body = e.target.value) }),
           el('button', {
             class: 'btn',
-            text: 'Save template',
+            text: state.busy === 'template' ? 'Saving…' : 'Save template',
+            disabled: state.busy ? '' : undefined,
             onclick: async () => {
               const t = currentTemplate();
+              state.busy = 'template'; // guard against a double-click racing two PUTs
+              render();
               await api(`/api/campaigns/templates/${t.id}`, { method: 'PUT', body: JSON.stringify({ body: t.body }) }).catch(() => {});
+              state.busy = false;
               state.editTemplate = false;
               load();
             },
@@ -179,7 +185,7 @@ function formView() {
 }
 
 function render() {
-  root.replaceChildren(state.viewing ? viewingView() : formView());
+  mount(root, state.viewing ? viewingView() : formView());
 }
 
 export function init() {
