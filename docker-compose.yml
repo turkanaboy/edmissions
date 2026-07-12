@@ -1,0 +1,17 @@
+services:
+  edmissions:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000" # localhost only — the reverse proxy fronts it
+    env_file: .env
+    environment:
+      EDMISSIONS_DATA_DIR: /app/data
+      EDMISSIONS_MUSIC_DIR: /app/data/music
+      EDMISSIONS_TRUST_PROXY: "1"
+    volumes:
+      # SQLite database and the local music library survive redeploys
+      - ./data:/app/data
+      # directory mount (not a single file) so host edits to content.json
+      # stay visible inside the container; restart to apply
+      - ./config:/app/config
