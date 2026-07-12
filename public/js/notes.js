@@ -2,7 +2,8 @@ import { api, el, capabilities } from './app.js';
 
 const root = document.getElementById('notes-root');
 const state = { notes: [], filterTag: null, editing: null, busy: false, error: null };
-const subjects = capabilities.subjects || [];
+// read at render time, not module-eval time — capabilities is filled during app init
+const subjects = () => capabilities.subjects || [];
 
 async function load() {
   const qs = state.filterTag ? `?tag=${encodeURIComponent(state.filterTag)}` : '';
@@ -93,7 +94,7 @@ function editorView() {
     el(
       'div',
       { class: 'row', style: 'flex-wrap:wrap' },
-      ...subjects.map((s) =>
+      ...subjects().map((s) =>
         el('span', {
           class: `pill${n.tags.includes(s) ? ' active' : ''}`,
           text: s,
@@ -140,7 +141,7 @@ function listView() {
       'div',
       { class: 'row', style: 'flex-wrap:wrap; margin-bottom:.45rem' },
       el('span', { class: `pill${state.filterTag ? '' : ' active'}`, text: 'all', onclick: () => { state.filterTag = null; load(); } }),
-      ...subjects.map((s) =>
+      ...subjects().map((s) =>
         el('span', { class: `pill${state.filterTag === s ? ' active' : ''}`, text: s, onclick: () => { state.filterTag = s; load(); } })
       ),
       el('button', {
@@ -183,4 +184,6 @@ function render() {
   root.replaceChildren(state.editing ? editorView() : listView());
 }
 
-load();
+export function init() {
+  load();
+}

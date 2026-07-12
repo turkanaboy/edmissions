@@ -182,4 +182,6 @@ function render() {
   root.replaceChildren(state.viewing ? viewingView() : formView());
 }
 
-load();
+export function init() {
+  load();
+}

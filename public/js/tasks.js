@@ -1,4 +1,4 @@
-import { api, el } from './app.js';
+import { api, el, mount } from './app.js';
 
 const root = document.getElementById('tasks-root');
 let tasks = [];
@@ -25,7 +25,8 @@ async function remove(t) {
 }
 
 function render() {
-  root.replaceChildren(
+  mount(
+    root,
     el(
       'form',
       {
@@ -55,4 +56,6 @@ function render() {
   );
 }
 
-load();
+export function init() {
+  load();
+}

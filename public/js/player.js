@@ -1,4 +1,4 @@
-import { api, el } from './app.js';
+import { api, el, mount } from './app.js';
 
 export const audio = new Audio();
 audio.preload = 'none';
@@ -95,10 +95,19 @@ async function runSearch(q) {
 function render() {
   const track = current();
   const upNext = state.queue.slice(state.index + 1, state.index + 4);
-  root.replaceChildren(
+  mount(
+    root,
     state.loading ? el('p', { class: 'muted', text: 'Tuning in…' }) : null,
     !state.loading && state.mode === 'off' && !track
       ? el('p', { class: 'muted', text: 'Pick a mode to start the music.' })
+      : null,
+    !state.loading && state.mode !== 'off' && !track
+      ? el('p', {
+          class: 'muted',
+          text: state.fallback
+            ? `No tracks available — ${state.fallback}. Drop audio files in data/music or add a Jamendo client id.`
+            : 'No tracks found for this mode.',
+        })
       : null,
     track
       ? el(
@@ -170,9 +179,10 @@ function render() {
   );
 }
 
-document.getElementById('mode-bar').addEventListener('click', (e) => {
-  const mode = e.target.dataset?.mode;
-  if (mode) setMode(mode); // the click is the user gesture that unlocks audio playback
-});
-
-render();
+export function init() {
+  document.getElementById('mode-bar').addEventListener('click', (e) => {
+    const mode = e.target.dataset?.mode;
+    if (mode) setMode(mode); // the click is the user gesture that unlocks audio playback
+  });
+  render();
+}

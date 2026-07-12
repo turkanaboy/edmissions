@@ -1,4 +1,4 @@
-import { api, el } from './app.js';
+import { api, el, mount } from './app.js';
 
 const root = document.getElementById('feed-root');
 const state = { starredOnly: false, articles: [], loading: true, polledOnEmpty: false };
@@ -76,7 +76,8 @@ function articleRow(a) {
 }
 
 function render() {
-  root.replaceChildren(
+  mount(
+    root,
     el(
       'div',
       { class: 'row', style: 'margin-bottom:.45rem' },
@@ -106,4 +107,6 @@ function render() {
   );
 }
 
-load();
+export function init() {
+  load();
+}
