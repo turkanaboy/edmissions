@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { renderTemplate, validateCampaignInput } from './campaigns.js';
+import { pickTemplate, renderTemplate, validateCampaignInput } from './campaigns.js';
+import { NOTE_JOIN, parseNote } from './notes.js';
 
 // Errors are logged as metadata only — never the note or campaign text (it can carry
 // financial-aid / student-record content).
@@ -29,12 +30,8 @@ export function aiRoutes() {
         summary,
         req.params.id
       );
-      const row = db
-        .prepare(
-          'SELECT n.*, a.title AS article_title, a.link AS article_link FROM notes n LEFT JOIN articles a ON a.id = n.article_id WHERE n.id = ?'
-        )
-        .get(req.params.id);
-      res.json({ ...row, tags: JSON.parse(row.tags || '[]') });
+      const row = db.prepare(`${NOTE_JOIN} WHERE n.id = ?`).get(req.params.id);
+      res.json(parseNote(row));
     } catch (err) {
       logAiError('summarize note', req.params.id, err);
       res.status(502).json({ error: 'AI request failed — try again' });
@@ -46,9 +43,7 @@ export function aiRoutes() {
     const fields = validateCampaignInput(req, res);
     if (!fields) return;
     const db = req.app.locals.db;
-    const tpl = req.body.template_id
-      ? db.prepare('SELECT * FROM campaign_templates WHERE id = ?').get(req.body.template_id)
-      : db.prepare('SELECT * FROM campaign_templates ORDER BY id LIMIT 1').get();
+    const tpl = pickTemplate(db, req.body.template_id);
     if (!tpl) return res.status(400).json({ error: 'No template available' });
     const brief = renderTemplate(tpl.body, fields);
     try {

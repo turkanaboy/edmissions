@@ -36,6 +36,12 @@ export function validateCampaignInput(req, res) {
   return { purpose, cta, cta_link, message_count: count };
 }
 
+export function pickTemplate(db, templateId) {
+  return templateId
+    ? db.prepare('SELECT * FROM campaign_templates WHERE id = ?').get(templateId)
+    : db.prepare('SELECT * FROM campaign_templates ORDER BY id LIMIT 1').get();
+}
+
 export function campaignRoutes() {
   const router = Router();
 
@@ -69,9 +75,7 @@ export function campaignRoutes() {
     const fields = validateCampaignInput(req, res);
     if (!fields) return;
     const db = req.app.locals.db;
-    const tpl = req.body.template_id
-      ? db.prepare('SELECT * FROM campaign_templates WHERE id = ?').get(req.body.template_id)
-      : db.prepare('SELECT * FROM campaign_templates ORDER BY id LIMIT 1').get();
+    const tpl = pickTemplate(db, req.body.template_id);
     if (!tpl) return res.status(400).json({ error: 'No template available' });
     const output = renderTemplate(tpl.body, fields);
     const info = db

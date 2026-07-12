@@ -1,10 +1,10 @@
 import { Router } from 'express';
 
-const JOIN = `
+export const NOTE_JOIN = `
   SELECT n.*, a.title AS article_title, a.link AS article_link
   FROM notes n LEFT JOIN articles a ON a.id = n.article_id
 `;
-const parseNote = (row) => ({ ...row, tags: JSON.parse(row.tags || '[]') });
+export const parseNote = (row) => ({ ...row, tags: JSON.parse(row.tags || '[]') });
 
 export function notesRoutes() {
   const router = Router();
@@ -12,7 +12,7 @@ export function notesRoutes() {
   router.get('/', (req, res) => {
     const db = req.app.locals.db;
     let notes = db
-      .prepare(`${JOIN} ORDER BY n.updated_at DESC, n.id DESC LIMIT 500`)
+      .prepare(`${NOTE_JOIN} ORDER BY n.updated_at DESC, n.id DESC LIMIT 500`)
       .all()
       .map(parseNote);
     if (req.query.tag) notes = notes.filter((n) => n.tags.includes(req.query.tag));
@@ -26,7 +26,7 @@ export function notesRoutes() {
     const info = db
       .prepare('INSERT INTO notes (body, tags, article_id) VALUES (?, ?, ?)')
       .run(body, JSON.stringify(tags), article_id);
-    const row = db.prepare(`${JOIN} WHERE n.id = ?`).get(info.lastInsertRowid);
+    const row = db.prepare(`${NOTE_JOIN} WHERE n.id = ?`).get(info.lastInsertRowid);
     res.status(201).json(parseNote(row));
   });
 
@@ -41,7 +41,7 @@ export function notesRoutes() {
       tagsJson,
       req.params.id
     );
-    res.json(parseNote(db.prepare(`${JOIN} WHERE n.id = ?`).get(req.params.id)));
+    res.json(parseNote(db.prepare(`${NOTE_JOIN} WHERE n.id = ?`).get(req.params.id)));
   });
 
   router.delete('/:id', (req, res) => {
