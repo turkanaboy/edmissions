@@ -9,6 +9,8 @@ import { feedRoutes } from './routes/feed.js';
 import { notesRoutes } from './routes/notes.js';
 import { campaignRoutes, seedTemplates } from './routes/campaigns.js';
 import { taskRoutes } from './routes/tasks.js';
+import { aiRoutes } from './routes/ai.js';
+import { createAi } from './anthropic.js';
 import { startPolling } from './poller.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -22,6 +24,7 @@ export function createApp(config = loadConfig()) {
   const auth = createAuth(config);
   app.locals.db = db;
   app.locals.config = config;
+  app.locals.ai = createAi(config);
 
   app.use(express.json({ limit: '1mb' }));
 
@@ -44,7 +47,7 @@ export function createApp(config = loadConfig()) {
   app.use('/api/notes', notesRoutes());
   app.use('/api/campaigns', campaignRoutes());
   app.use('/api/tasks', taskRoutes());
-  // the AI routes (summarize, generate) are mounted here in U7
+  app.use('/api', aiRoutes());
 
   app.use(express.static(path.join(__dirname, '..', 'public')));
 
