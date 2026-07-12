@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EDMissions</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <canvas id="viz" aria-hidden="true"></canvas>
+
+  <header class="topbar">
+    <h1 class="logo">ED<span>Missions</span></h1>
+    <nav class="modes" id="mode-bar" aria-label="Intensity mode">
+      <button data-mode="intense">Intense Focus</button>
+      <button data-mode="vibing">Vibing</button>
+      <button data-mode="chill">Chill</button>
+      <button data-mode="off" class="active">Off</button>
+    </nav>
+    <button id="logout" class="btn btn-ghost">log out</button>
+  </header>
+
+  <main class="grid">
+    <section class="panel" id="panel-player" aria-label="Player">
+      <h2>Player</h2>
+      <div id="player-root"><p class="muted">Pick a mode to start the music.</p></div>
+    </section>
+    <section class="panel" id="panel-notes" aria-label="Research hub">
+      <h2>Research Hub</h2>
+      <div id="notes-root"></div>
+    </section>
+    <section class="panel" id="panel-feed" aria-label="Higher-ed feed">
+      <h2>Higher-Ed Feed</h2>
+      <div id="feed-root"></div>
+    </section>
+    <section class="panel" id="panel-campaigns" aria-label="Campaigns">
+      <h2>Campaigns</h2>
+      <div id="campaigns-root"></div>
+    </section>
+    <section class="panel" id="panel-tasks" aria-label="Tasks">
+      <h2>Tasks</h2>
+      <div id="tasks-root"></div>
+    </section>
+  </main>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

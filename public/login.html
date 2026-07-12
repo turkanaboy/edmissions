@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EDMissions — log in</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="login-body">
+  <form id="login-form" class="login-card">
+    <h1 class="logo">ED<span>Missions</span></h1>
+    <p class="muted">the rave console for higher ed</p>
+    <input name="username" placeholder="username" autocomplete="username" required>
+    <input name="password" type="password" placeholder="password" autocomplete="current-password" required>
+    <button class="btn btn-neon" type="submit">Enter the console</button>
+    <p id="login-error" class="error" hidden></p>
+  </form>
+  <script>
+    const form = document.getElementById('login-form');
+    const err = document.getElementById('login-error');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.hidden = true;
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: form.username.value.trim(), password: form.password.value }),
+      }).catch(() => null);
+      if (res && res.ok) { location.href = '/'; return; }
+      const data = res ? await res.json().catch(() => ({})) : {};
+      err.textContent = data.error || 'Login failed — is the server running?';
+      err.hidden = false;
+    });
+  </script>
+</body>
+</html>

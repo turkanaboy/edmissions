@@ -1,0 +1,21 @@
+{
+  "modes": {
+    "intense": { "label": "Intense Focus", "tags": ["techno", "electronic", "dance", "hardstyle"], "visual": "full" },
+    "vibing": { "label": "Vibing", "tags": ["house", "deephouse", "electronic", "chillout"], "visual": "medium" },
+    "chill": { "label": "Chill", "tags": ["lofi", "ambient", "chillout", "folk", "bluegrass"], "visual": "ambient" }
+  },
+  "feeds": [
+    { "name": "Inside Higher Ed", "url": "https://www.insidehighered.com/rss.xml" },
+    { "name": "Higher Ed Dive", "url": "https://www.highereddive.com/feeds/news/" },
+    { "name": "NPR Education", "url": "https://feeds.npr.org/1013/rss.xml" },
+    { "name": "EAB", "url": "https://eab.com/feed/" },
+    { "name": "The Chronicle", "url": "https://news.google.com/rss/search?q=site:chronicle.com" },
+    { "name": "Times Higher Ed", "url": "https://news.google.com/rss/search?q=site:timeshighereducation.com" }
+  ],
+  "keywords": [
+    "enrollment", "admissions", "yield", "melt", "fafsa", "financial aid",
+    "demographic cliff", "retention", "transfer", "test-optional"
+  ],
+  "subjects": ["admissions", "financial aid", "student records", "housing", "orientation", "HR"],
+  "defaultCampaignTemplate": "You are helping draft a higher-ed messaging campaign for prospective or current students.\n\n## Campaign context\n- Purpose: {{purpose}}\n- Call to action: {{cta}}\n- CTA link: {{cta_link}}\n- Number of messages: {{message_count}}\n\n## What to produce\nDraft {{message_count}} messages that build toward the call to action. For each message provide:\n1. A subject line (under 60 characters)\n2. A body of 120-180 words\n3. A one-line preview text\n\n## Voice and constraints\n- Warm, professional, student-centered; no jargon\n- Each message stands alone but the sequence should escalate urgency gently\n- Every message ends by pointing to the call to action: {{cta}} ({{cta_link}})\n- Flag anything that needs a compliance or FERPA review"
+}
