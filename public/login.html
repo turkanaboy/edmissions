@@ -18,10 +18,14 @@
     <label class="field"><span>Username</span><input name="username" autocomplete="username" required></label>
     <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password" required></label>
     <button class="btn btn-neon" type="submit">Enter the console</button>
-    <p id="login-error" class="error" hidden></p>
+    <p id="login-error" class="error" role="alert" hidden></p>
     <p class="login-credit">Video: <a href="https://coverr.co/videos/people-at-a-rave-ygh2rjzltq" target="_blank" rel="noopener noreferrer">People at a rave</a> via Coverr</p>
   </form>
   <script>
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    const backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    if (themeColor && backgroundColor) themeColor.content = backgroundColor;
+
     const video = document.getElementById('login-video');
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
       const source = video.querySelector('source');

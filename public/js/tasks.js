@@ -1,30 +1,32 @@
-import { api, el, mount } from './app.js';
+import { api, el, mount, restoreFocus } from './app.js';
 
 const root = document.getElementById('tasks-root');
 let tasks = [];
 
-async function load() {
+async function load(focusKey) {
   const data = await api('/api/tasks').catch(() => ({ tasks: [] }));
   tasks = data.tasks;
-  render();
+  render(focusKey);
 }
 
 async function add(text) {
   await api('/api/tasks', { method: 'POST', body: JSON.stringify({ text }) }).catch(() => {});
-  load();
+  load('task-entry');
 }
 
 async function toggle(t) {
   await api(`/api/tasks/${t.id}`, { method: 'PUT', body: JSON.stringify({ done: !t.done }) }).catch(() => {});
-  load();
+  load(`task-${t.id}`);
 }
 
 async function remove(t) {
+  const index = tasks.indexOf(t);
+  const neighbor = tasks[index + 1] || tasks[index - 1];
   await api(`/api/tasks/${t.id}`, { method: 'DELETE' }).catch(() => {});
-  load();
+  load(neighbor ? `task-${neighbor.id}` : 'task-entry');
 }
 
-function render() {
+function render(focusKey) {
   mount(
     root,
     el(
@@ -40,20 +42,27 @@ function render() {
           }
         },
       },
-      el('input', { name: 't', placeholder: 'add a task…' }),
-      el('button', { class: 'btn', text: '+' })
+      el('input', { name: 't', 'aria-label': 'New task', 'data-focus': 'task-entry', placeholder: 'add a task…' }),
+      el('button', { class: 'btn', text: '+', 'aria-label': 'Add task' })
     ),
-    !tasks.length ? el('p', { class: 'muted', text: 'No tasks yet.' }) : null,
+    !tasks.length ? el('p', { class: 'muted', role: 'status', text: 'No tasks yet.' }) : null,
     ...tasks.map((t) =>
       el(
         'div',
         { class: 'list-item row' },
-        el('input', { type: 'checkbox', style: 'width:auto', ...(t.done ? { checked: '' } : {}), onchange: () => toggle(t) }),
+        el('label', { class: 'task-check' }, el('input', {
+          type: 'checkbox',
+          'aria-label': `Mark ${t.text} as ${t.done ? 'not done' : 'done'}`,
+          'data-focus': `task-${t.id}`,
+          ...(t.done ? { checked: '' } : {}),
+          onchange: () => toggle(t),
+        })),
         el('span', { text: t.text, style: t.done ? 'text-decoration:line-through; color:var(--dim); flex:1' : 'flex:1' }),
-        el('button', { class: 'btn-icon', text: '×', title: 'Delete', onclick: () => remove(t) })
+        el('button', { class: 'btn-icon', text: '×', title: 'Delete', 'aria-label': `Delete ${t.text}`, onclick: () => remove(t) })
       )
     )
   );
+  restoreFocus(root, focusKey, 'task-entry');
 }
 
 export function init() {

@@ -1,4 +1,4 @@
-import { api, el, mount, capabilities } from './app.js';
+import { announce, api, el, mount, capabilities } from './app.js';
 
 const root = document.getElementById('campaigns-root');
 const state = {
@@ -41,6 +41,7 @@ async function submit(kind) {
     state.viewing = created;
     state.copied = false;
     await load();
+    announce(kind === 'brief' ? 'Handoff brief ready.' : kind === 'html' ? 'HTML campaign ready.' : 'Text campaign ready.');
   } catch (err) {
     state.busy = false;
     state.error = err.message;
@@ -54,6 +55,7 @@ async function copyOutput() {
     await navigator.clipboard.writeText(state.viewing.output);
     state.copied = true;
     render();
+    announce('Campaign output copied.');
     clearTimeout(copyTimer);
     copyTimer = setTimeout(() => {
       state.copied = false;
@@ -81,7 +83,7 @@ function viewingView() {
       el('button', { class: 'btn btn-ghost push-right', text: '← Back', onclick: () => { state.viewing = null; render(); } })
     ),
     el('textarea', { class: 'output-area', rows: '14', readonly: '', text: c.output }),
-    state.error ? el('p', { class: 'error', text: state.error }) : null,
+    state.error ? el('p', { class: 'error', role: 'alert', text: state.error }) : null,
     el(
       'div',
       { class: 'row' },
@@ -108,6 +110,7 @@ async function saveCampus(campus) {
     state.settings = null;
     state.busy = false;
     render();
+    announce('Campus memory saved.');
   } catch (err) {
     state.busy = false;
     state.error = err.message;
@@ -133,7 +136,7 @@ function campusView() {
     input('audience', 'Priority audiences', { area: true }),
     input('voice', 'Brand voice', { area: true }),
     input('facts', 'Approved facts and proof points', { area: true, rows: '5', hint: 'Programs, costs, outcomes, deadlines, support services, and other facts the writer may safely use.' }),
-    state.error ? el('p', { class: 'error', text: state.error }) : null,
+    state.error ? el('p', { class: 'error', role: 'alert', text: state.error }) : null,
     el('div', { class: 'row' },
       el('button', { class: 'btn btn-neon', text: state.busy === 'campus' ? 'Saving…' : 'Save campus memory', disabled: state.busy ? '' : undefined, onclick: () => saveCampus(campus) }),
       el('button', { class: 'btn btn-ghost', text: 'Cancel', onclick: () => { state.settings = null; state.error = null; render(); } })
@@ -156,7 +159,7 @@ function templateView() {
       text: draft.html_body,
       oninput: (e) => (draft.html_body = e.target.value),
     }), 'Use {{subject}}, {{preview}}, and {{body}} for generated content. Campaign and campus placeholders also work.'),
-    state.error ? el('p', { class: 'error', text: state.error }) : null,
+    state.error ? el('p', { class: 'error', role: 'alert', text: state.error }) : null,
     el('div', { class: 'row' },
       el('button', {
         class: 'btn btn-neon',
@@ -170,6 +173,7 @@ function templateView() {
             state.settings = null;
             state.busy = false;
             await load();
+            announce('Campaign templates saved.');
           } catch (err) {
             state.busy = false;
             state.error = err.message;
@@ -210,7 +214,7 @@ function formView() {
       ))
     ),
     el('button', { class: 'text-button', text: 'Edit writing and HTML templates', onclick: () => { state.settings = 'template'; render(); } }),
-    state.error ? el('p', { class: 'error', text: state.error }) : null,
+    state.error ? el('p', { class: 'error', role: 'alert', text: state.error }) : null,
     el('div', { class: 'campaign-actions' },
       el('button', { class: 'btn', text: state.busy === 'brief' ? 'Building…' : 'Create handoff brief', disabled: state.busy ? '' : undefined, onclick: () => submit('brief') }),
       capabilities.ai ? el('button', { class: 'btn btn-neon', text: state.busy === 'text' ? 'Writing…' : 'Write text campaign', disabled: state.busy ? '' : undefined, onclick: () => submit('text') }) : null,
@@ -230,7 +234,18 @@ function formView() {
 }
 
 function render() {
-  mount(root, state.viewing ? viewingView() : formView());
+  const busyMessage = {
+    brief: 'Building handoff brief…',
+    text: 'Writing text campaign…',
+    html: 'Writing HTML campaign…',
+    campus: 'Saving campus memory…',
+    template: 'Saving campaign templates…',
+  }[state.busy];
+  mount(
+    root,
+    busyMessage ? el('p', { class: 'muted operation-status', role: 'status', text: busyMessage }) : null,
+    state.viewing ? viewingView() : formView()
+  );
 }
 
 export function init() {

@@ -1,4 +1,4 @@
-import { api, el, mount, capabilities } from './app.js';
+import { announce, api, el, mount, restoreFocus, capabilities } from './app.js';
 import { addResponse, clearResponse, markResponseSaved } from './research-chat-state.js';
 
 const root = document.getElementById('notes-root');
@@ -6,51 +6,54 @@ const state = { notes: [], filterTag: null, editing: null, busy: false, error: n
 // read at render time, not module-eval time — capabilities is filled during app init
 const subjects = () => capabilities.subjects || [];
 
-async function load() {
+async function load(focusKey) {
   const qs = state.filterTag ? `?tag=${encodeURIComponent(state.filterTag)}` : '';
   const data = await api('/api/notes' + qs).catch(() => ({ notes: [] }));
   state.notes = data.notes;
-  render();
+  render(focusKey);
 }
 
 async function saveEditing() {
   const n = state.editing;
   if (!n || !n.body.trim()) return;
   state.busy = true;
-  render();
+  render('note-save');
   try {
     const payload = { body: n.body, tags: n.tags, article_id: n.article_id || null };
     const saved = n.id ? await api(`/api/notes/${n.id}`, { method: 'PUT', body: JSON.stringify(payload) }) : await api('/api/notes', { method: 'POST', body: JSON.stringify(payload) });
     state.editing = null;
     state.busy = false;
-    await load();
+    await load('new-note');
+    announce('Note saved.');
     return saved;
   } catch (err) {
     state.busy = false;
     state.error = err.message;
-    render();
+    render('note-save');
   }
 }
 
 async function removeNote(id) {
   await api(`/api/notes/${id}`, { method: 'DELETE' }).catch(() => {});
   if (state.editing?.id === id) state.editing = null;
-  load();
+  await load('new-note');
+  announce('Note deleted.');
 }
 
 async function summarize(note) {
   state.busy = true;
   state.error = null;
-  render();
+  render('note-summarize');
   try {
     const updated = await api(`/api/notes/${note.id}/summarize`, { method: 'POST' });
     state.editing = { ...updated };
     state.busy = false;
-    load();
+    await load('note-summarize');
+    announce('Summary ready.');
   } catch (err) {
     state.busy = false;
     state.error = `Summary failed: ${err.message}`;
-    render();
+    render('note-summarize');
   }
 }
 
@@ -59,7 +62,7 @@ async function askResearch() {
   if (!question || state.busy) return;
   state.busy = 'chat';
   state.error = null;
-  render();
+  render('research-question');
   let added = false;
   try {
     const { answer } = await api('/api/research/chat', { method: 'POST', body: JSON.stringify({ question }) });
@@ -70,7 +73,8 @@ async function askResearch() {
     state.error = `Research failed: ${err.message}`;
   }
   state.busy = false;
-  render();
+  render('research-question');
+  if (added) announce('Research response ready.');
   if (added) root.querySelector('.chat-response:last-of-type')?.scrollIntoView({ block: 'nearest' });
 }
 
@@ -78,7 +82,8 @@ async function saveAnswer(item) {
   if (item.saved || item.saving) return;
   item.saving = true;
   state.error = null;
-  render();
+  const itemIndex = state.chat.indexOf(item);
+  render(`research-clear-${itemIndex}`);
   const saved = await api('/api/notes', {
     method: 'POST',
     body: JSON.stringify({ body: `${item.question}\n\n${item.answer}`, tags: ['admissions'] }),
@@ -86,11 +91,12 @@ async function saveAnswer(item) {
   if (!saved) {
     item.saving = false;
     state.error = 'Could not save this response — try again.';
-    render();
+    render(`research-save-${itemIndex}`);
     return;
   }
   state.chat = markResponseSaved(state.chat, item);
-  await load();
+  await load(`research-clear-${itemIndex}`);
+  announce('Research response saved to notes.');
 }
 
 // Feed panel dispatches this when the user hits "+" on an article
@@ -105,7 +111,8 @@ document.addEventListener('edm:add-to-note', async (e) => {
   // don't stomp an open unsaved draft — the note is saved regardless; only
   // steal the editor when it's free
   if (!state.editing) state.editing = { ...saved };
-  load();
+  await load('new-note');
+  announce('Article added to notes.');
 });
 
 function editorView() {
@@ -126,6 +133,7 @@ function editorView() {
       : null,
     el('textarea', {
       rows: '9',
+      'aria-label': 'Note body',
       text: n.body,
       oninput: (e) => {
         n.body = e.target.value;
@@ -135,24 +143,28 @@ function editorView() {
       'div',
       { class: 'row', style: 'flex-wrap:wrap' },
       ...subjects().map((s) =>
-        el('span', {
+        el('button', {
+          type: 'button',
           class: `pill${n.tags.includes(s) ? ' active' : ''}`,
+          'aria-pressed': String(n.tags.includes(s)),
+          'data-focus': `tag-${s}`,
           text: s,
           onclick: () => {
             n.tags = n.tags.includes(s) ? n.tags.filter((t) => t !== s) : [...n.tags, s];
-            render();
+            render(`tag-${s}`);
           },
         })
       )
     ),
-    state.error ? el('p', { class: 'error', text: state.error }) : null,
+    state.error ? el('p', { class: 'error', role: 'alert', text: state.error }) : null,
     el(
       'div',
       { class: 'row' },
-      el('button', { class: 'btn btn-neon', text: state.busy ? 'Saving…' : 'Save', disabled: state.busy ? '' : undefined, onclick: saveEditing }),
+      el('button', { class: 'btn btn-neon', 'data-focus': 'note-save', text: state.busy ? 'Saving…' : 'Save', disabled: state.busy ? '' : undefined, onclick: saveEditing }),
       capabilities.ai && n.id
         ? el('button', {
             class: 'btn',
+            'data-focus': 'note-summarize',
             text: state.busy ? 'Summarizing…' : 'Summarize',
             disabled: state.busy ? '' : undefined,
             onclick: () => summarize(n),
@@ -188,6 +200,8 @@ function listView() {
           el('div', { class: 'chat-composer' },
             el('textarea', {
               rows: '2',
+              'aria-label': 'Research question',
+              'data-focus': 'research-question',
               placeholder: 'What are good ways a technical college can recruit in New York State?',
               text: state.question,
               oninput: (e) => (state.question = e.target.value),
@@ -198,26 +212,30 @@ function listView() {
                 }
               },
             }),
-            el('button', { class: 'btn btn-neon', text: state.busy === 'chat' ? 'Thinking…' : 'Ask', disabled: state.busy ? '' : undefined, onclick: askResearch })
+            el('button', { class: 'btn btn-neon', 'data-focus': 'research-ask', text: state.busy === 'chat' ? 'Thinking…' : 'Ask', disabled: state.busy ? '' : undefined, onclick: askResearch })
           ),
-          ...state.chat.map((item) => el('article', { class: 'chat-response' },
+          state.busy === 'chat' ? el('p', { class: 'muted', role: 'status', text: 'Researching…' }) : null,
+          state.error ? el('p', { class: 'error', role: 'alert', text: state.error }) : null,
+          ...state.chat.map((item, index) => el('article', { class: 'chat-response' },
             el('strong', { text: item.question }),
             el('p', { text: item.answer }),
             el('div', { class: 'row' },
               el('button', {
                 class: 'btn btn-ghost',
+                'data-focus': `research-save-${index}`,
                 text: item.saving ? 'Saving…' : item.saved ? 'Saved to notes' : 'Save response to notes',
                 disabled: item.saved || item.saving ? '' : undefined,
                 onclick: () => saveAnswer(item),
               }),
               el('button', {
                 class: 'btn btn-ghost',
+                'data-focus': `research-clear-${index}`,
                 text: 'Clear response',
                 title: item.saved ? 'Remove from chat; the saved note is kept' : 'Remove from chat',
                 disabled: item.saving ? '' : undefined,
                 onclick: () => {
                   state.chat = clearResponse(state.chat, item);
-                  render();
+                  render('research-question');
                 },
               })
             )
@@ -228,12 +246,27 @@ function listView() {
     el(
       'div',
       { class: 'row', style: 'flex-wrap:wrap; margin-bottom:.45rem' },
-      el('span', { class: `pill${state.filterTag ? '' : ' active'}`, text: 'all', onclick: () => { state.filterTag = null; load(); } }),
+      el('button', {
+        type: 'button',
+        class: `pill${state.filterTag ? '' : ' active'}`,
+        'aria-pressed': String(!state.filterTag),
+        'data-focus': 'filter-all',
+        text: 'all',
+        onclick: () => { state.filterTag = null; load('filter-all'); },
+      }),
       ...subjects().map((s) =>
-        el('span', { class: `pill${state.filterTag === s ? ' active' : ''}`, text: s, onclick: () => { state.filterTag = s; load(); } })
+        el('button', {
+          type: 'button',
+          class: `pill${state.filterTag === s ? ' active' : ''}`,
+          'aria-pressed': String(state.filterTag === s),
+          'data-focus': `filter-${s}`,
+          text: s,
+          onclick: () => { state.filterTag = s; load(`filter-${s}`); },
+        })
       ),
       el('button', {
         class: 'btn',
+        'data-focus': 'new-note',
         style: 'margin-left:auto',
         text: '+ note',
         onclick: () => {
@@ -242,7 +275,7 @@ function listView() {
         },
       })
     ),
-    !state.notes.length ? el('p', { class: 'muted', text: 'Nothing captured yet — paste research or add an article from the feed.' }) : null,
+    !state.notes.length ? el('p', { class: 'muted', role: 'status', text: 'Nothing captured yet — paste research or add an article from the feed.' }) : null,
     ...state.notes.map((n) =>
       el(
         'div',
@@ -268,8 +301,9 @@ function listView() {
   );
 }
 
-function render() {
+function render(focusKey) {
   mount(root, state.editing ? editorView() : listView());
+  restoreFocus(root, focusKey, 'new-note');
 }
 
 export function init() {

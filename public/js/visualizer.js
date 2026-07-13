@@ -2,6 +2,12 @@ import { audio, onPlayerEvent } from './player.js';
 
 const canvas = document.getElementById('viz');
 const ctx = canvas.getContext('2d');
+const rootStyles = getComputedStyle(document.documentElement);
+const trailColors = {
+  full: rootStyles.getPropertyValue('--viz-trail-full').trim(),
+  medium: rootStyles.getPropertyValue('--viz-trail-medium').trim(),
+  ambient: rootStyles.getPropertyValue('--viz-trail-ambient').trim(),
+};
 
 // ponytail: visual level per mode mirrors the config/content.json defaults
 const VISUAL_BY_MODE = { intense: 'full', vibing: 'medium', chill: 'ambient', off: 'off' };
@@ -43,7 +49,7 @@ const avg = (from, to) => {
 
 function drawFull(t) {
   const { width: w, height: h } = canvas;
-  ctx.fillStyle = 'rgba(7, 7, 13, 0.24)';
+  ctx.fillStyle = trailColors.full;
   ctx.fillRect(0, 0, w, h);
   const bass = avg(0, 8);
 
@@ -67,7 +73,7 @@ function drawFull(t) {
 
 function drawMedium(t) {
   const { width: w, height: h } = canvas;
-  ctx.fillStyle = 'rgba(7, 7, 13, 0.14)';
+  ctx.fillStyle = trailColors.medium;
   ctx.fillRect(0, 0, w, h);
   const bass = avg(0, 8);
   const cx = w / 2;
@@ -96,7 +102,7 @@ const blobs = [
 
 function drawAmbient(t) {
   const { width: w, height: h } = canvas;
-  ctx.fillStyle = 'rgba(7, 7, 13, 0.05)';
+  ctx.fillStyle = trailColors.ambient;
   ctx.fillRect(0, 0, w, h);
   const lift = bins ? avg(0, 16) : 0;
   for (const b of blobs) {

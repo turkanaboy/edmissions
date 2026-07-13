@@ -39,6 +39,27 @@ export function mount(root, ...children) {
   root.replaceChildren(...children.filter(Boolean));
 }
 
+export function restoreFocus(root, key, fallback) {
+  if (!key) return;
+  const controls = [...root.querySelectorAll('[data-focus]')];
+  const target = controls.find((node) => node.dataset.focus === String(key))
+    || controls.find((node) => node.dataset.focus === String(fallback));
+  target?.focus();
+}
+
+export function announce(message) {
+  const status = document.getElementById('app-status');
+  if (!status) return;
+  status.textContent = '';
+  queueMicrotask(() => {
+    status.textContent = message;
+  });
+}
+
+const themeColor = document.querySelector('meta[name="theme-color"]');
+const backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+if (themeColor && backgroundColor) themeColor.content = backgroundColor;
+
 // Mutable so panel modules can import the binding safely during the import cycle;
 // populated below before any panel init runs.
 export const capabilities = { ai: false, subjects: [] };

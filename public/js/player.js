@@ -1,4 +1,4 @@
-import { api, el, mount } from './app.js';
+import { api, el, mount, restoreFocus } from './app.js';
 
 export const audio = new Audio();
 audio.preload = 'none';
@@ -17,7 +17,7 @@ const emit = (type) => listeners.forEach((fn) => fn(type, state));
 
 const current = () => state.queue[state.index] || null;
 
-async function play(i) {
+async function play(i, focusKey) {
   if (!state.queue.length) return;
   state.index = ((i % state.queue.length) + state.queue.length) % state.queue.length;
   audio.src = current().audio;
@@ -26,7 +26,7 @@ async function play(i) {
   } catch {
     /* autoplay guard or dead stream; the error handler advances */
   }
-  render();
+  render(focusKey);
   emit('track');
 }
 
@@ -34,7 +34,7 @@ audio.addEventListener('playing', () => {
   errorStreak = 0;
   render();
 });
-audio.addEventListener('pause', render);
+audio.addEventListener('pause', () => render());
 audio.addEventListener('ended', () => play(state.index + 1));
 audio.addEventListener('error', () => {
   errorStreak += 1;
@@ -47,6 +47,7 @@ export async function setMode(mode) {
   state.mode = mode;
   document.querySelectorAll('#mode-bar button').forEach((b) => {
     b.classList.toggle('active', b.dataset.mode === mode);
+    b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
   });
   emit('mode');
   if (mode === 'off') {
@@ -81,24 +82,25 @@ async function runSearch(q) {
   const myOp = ++opId;
   errorStreak = 0;
   state.loading = true;
-  render();
+  render('music-search');
   try {
     const result = await api(`/api/music/search?q=${encodeURIComponent(q)}`);
     if (myOp !== opId) return;
     state.queue = result.tracks;
     state.fallback = result.source === 'local' ? 'local library' : null;
     state.loading = false;
-    if (state.queue.length) await play(0);
-    else render();
+    if (state.queue.length) await play(0, 'music-search');
+    else render('music-search');
   } catch (err) {
     if (myOp !== opId) return;
     state.loading = false;
     state.fallback = err.message;
-    render();
+    render('music-search');
   }
 }
 
-function render() {
+function render(focusKey) {
+  const activeKey = focusKey || (root.contains(document.activeElement) ? document.activeElement.dataset.focus : null);
   const track = current();
   const upNext = state.queue.slice(state.index + 1, state.index + 4);
   mount(
@@ -126,10 +128,12 @@ function render() {
     el(
       'div',
       { class: 'row', style: 'margin-top:.6rem' },
-      el('button', { class: 'btn', title: 'Previous', onclick: () => play(state.index - 1), text: '⏮' }),
+      el('button', { class: 'btn', title: 'Previous', 'aria-label': 'Previous track', 'data-focus': 'player-previous', onclick: () => play(state.index - 1, 'player-previous'), text: '⏮' }),
       el('button', {
         class: 'btn btn-neon',
         title: 'Play / pause',
+        'aria-label': audio.paused ? 'Play' : 'Pause',
+        'data-focus': 'player-toggle',
         text: audio.paused ? '▶' : '⏸',
         onclick: () => {
           if (audio.paused) {
@@ -138,9 +142,10 @@ function render() {
           } else audio.pause();
         },
       }),
-      el('button', { class: 'btn', title: 'Skip', onclick: () => play(state.index + 1), text: '⏭' }),
+      el('button', { class: 'btn', title: 'Skip', 'aria-label': 'Next track', 'data-focus': 'player-next', onclick: () => play(state.index + 1, 'player-next'), text: '⏭' }),
       el('input', {
         type: 'range',
+        'aria-label': 'Volume',
         min: '0',
         max: '1',
         step: '0.05',
@@ -162,7 +167,7 @@ function render() {
           if (q) runSearch(q);
         },
       },
-      el('input', { name: 'q', placeholder: 'search open-source EDM…' }),
+      el('input', { name: 'q', 'aria-label': 'Search music', 'data-focus': 'music-search', placeholder: 'search open-source EDM…' }),
       el('button', { class: 'btn', text: 'Go' })
     ),
     upNext.length
@@ -183,6 +188,7 @@ function render() {
         )
       : null
   );
+  restoreFocus(root, activeKey);
 }
 
 export function init() {
