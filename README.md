@@ -58,13 +58,19 @@ The compose file binds to `127.0.0.1:3000` and mounts `./data` (SQLite + music)
 and `./config` as volumes, so redeploys keep your notes, stars, tasks, and
 tweaks. `EDMISSIONS_TRUST_PROXY=1` is set for you.
 
-Point a TLS subdomain at it:
+Point a TLS subdomain at it. If your reverse proxy is a **container on its own
+Docker network** (e.g. an existing nginx/Caddy stack from another project),
+`docker-compose.yml` already joins that network via the external
+`chiefofstaff_default` network — edit that name in `docker-compose.yml` if
+your proxy's network is called something else (`docker network ls` to check),
+then proxy to `http://edmissions:3000` (the compose service name) instead of a
+`127.0.0.1:PORT` host address.
 
 **Caddy**
 
 ```
 edm.example.com {
-    reverse_proxy 127.0.0.1:3000
+    reverse_proxy edmissions:3000
 }
 ```
 
@@ -77,7 +83,7 @@ server {
     # ssl_certificate / ssl_certificate_key ...
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://edmissions:3000;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -85,7 +91,7 @@ server {
 }
 ```
 
-Both forward `X-Forwarded-For` (Caddy does it by default), which the login rate
+Forward `X-Forwarded-For` (Caddy does it by default), which the login rate
 limiter needs to see real client IPs.
 
 ## Tests

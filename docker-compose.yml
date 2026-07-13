@@ -2,8 +2,6 @@ services:
   edmissions:
     build: .
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:3000:3000" # localhost only — the reverse proxy fronts it
     env_file: .env
     environment:
       EDMISSIONS_DATA_DIR: /app/data
@@ -15,3 +13,11 @@ services:
       # directory mount (not a single file) so host edits to content.json
       # stay visible inside the container; restart to apply
       - ./config:/app/config
+    networks:
+      # joins the existing chiefofstaff nginx network so that proxy can reach
+      # this container by service name (edmissions:3000) — no host port needed
+      - chiefofstaff_default
+
+networks:
+  chiefofstaff_default:
+    external: true
