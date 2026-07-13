@@ -1,4 +1,5 @@
 import { api, el, mount, capabilities } from './app.js';
+import { addResponse, clearResponse, markResponseSaved } from './research-chat-state.js';
 
 const root = document.getElementById('notes-root');
 const state = { notes: [], filterTag: null, editing: null, busy: false, error: null, question: '', chat: [] };
@@ -59,24 +60,36 @@ async function askResearch() {
   state.busy = 'chat';
   state.error = null;
   render();
+  let added = false;
   try {
     const { answer } = await api('/api/research/chat', { method: 'POST', body: JSON.stringify({ question }) });
-    state.chat.unshift({ question, answer, saved: false });
+    state.chat = addResponse(state.chat, question, answer);
     state.question = '';
+    added = true;
   } catch (err) {
     state.error = `Research failed: ${err.message}`;
   }
   state.busy = false;
   render();
+  if (added) root.querySelector('.chat-response:last-of-type')?.scrollIntoView({ block: 'nearest' });
 }
 
 async function saveAnswer(item) {
+  if (item.saved || item.saving) return;
+  item.saving = true;
+  state.error = null;
+  render();
   const saved = await api('/api/notes', {
     method: 'POST',
     body: JSON.stringify({ body: `${item.question}\n\n${item.answer}`, tags: ['admissions'] }),
   }).catch(() => null);
-  if (!saved) return;
-  item.saved = true;
+  if (!saved) {
+    item.saving = false;
+    state.error = 'Could not save this response — try again.';
+    render();
+    return;
+  }
+  state.chat = markResponseSaved(state.chat, item);
   await load();
 }
 
@@ -190,7 +203,24 @@ function listView() {
           ...state.chat.map((item) => el('article', { class: 'chat-response' },
             el('strong', { text: item.question }),
             el('p', { text: item.answer }),
-            el('button', { class: 'btn btn-ghost', text: item.saved ? 'Saved to notes' : 'Save response to notes', disabled: item.saved ? '' : undefined, onclick: () => saveAnswer(item) })
+            el('div', { class: 'row' },
+              el('button', {
+                class: 'btn btn-ghost',
+                text: item.saving ? 'Saving…' : item.saved ? 'Saved to notes' : 'Save response to notes',
+                disabled: item.saved || item.saving ? '' : undefined,
+                onclick: () => saveAnswer(item),
+              }),
+              el('button', {
+                class: 'btn btn-ghost',
+                text: 'Clear response',
+                title: item.saved ? 'Remove from chat; the saved note is kept' : 'Remove from chat',
+                disabled: item.saving ? '' : undefined,
+                onclick: () => {
+                  state.chat = clearResponse(state.chat, item);
+                  render();
+                },
+              })
+            )
           ))
         )
       : null,
