@@ -109,6 +109,20 @@ p { text-wrap: pretty; }
 }
 .modes button.active { color: var(--ink); background: oklch(0.7 0.25 305 / 0.16); border-color: var(--purple); }
 
+.account { display: flex; align-items: center; gap: 0.7rem; }
+.welcome {
+  display: inline-block;
+  color: var(--purple-bright);
+  font-family: "Bahnschrift", "Arial Black", Impact, sans-serif;
+  font-size: 0.94rem;
+  font-style: italic;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+  text-shadow: 0 0 6px oklch(0.72 0.27 305 / 0.85), 0 0 12px oklch(0.72 0.27 340 / 0.4);
+  transform: skewX(-3deg);
+  white-space: nowrap;
+}
+
 .grid {
   position: relative;
   z-index: var(--z-content);
@@ -234,10 +248,14 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 .notes-divider { display: flex; align-items: center; gap: 0.55rem; margin: 0.2rem 0 0.6rem; color: var(--dim); font-size: 0.72rem; }
 .notes-divider::after { content: ""; height: 1px; flex: 1; background: var(--hairline); }
 
-.login-body { display: grid; min-height: 100vh; place-items: center; background: radial-gradient(70% 60% at 50% 0%, oklch(0.32 0.18 305), transparent 65%), var(--bg); }
-.login-card { display: flex; width: min(350px, calc(100vw - 2rem)); flex-direction: column; gap: 0.85rem; padding: 2rem; background: var(--surface-solid); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 8px 8px oklch(0.05 0.03 300 / 0.5); }
+.login-body { position: relative; display: grid; min-height: 100vh; overflow: hidden; place-items: center; background: radial-gradient(70% 60% at 50% 0%, oklch(0.32 0.18 305), transparent 65%), var(--bg); isolation: isolate; }
+.login-body::before { content: ""; position: fixed; inset: 0; z-index: -1; background: linear-gradient(180deg, oklch(0.08 0.035 300 / 0.56), oklch(0.08 0.035 300 / 0.84)), radial-gradient(70% 80% at 50% 30%, oklch(0.48 0.24 305 / 0.22), transparent 70%); }
+.login-video { position: fixed; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; opacity: 0.38; }
+.login-card { position: relative; display: flex; width: min(350px, calc(100vw - 2rem)); flex-direction: column; gap: 0.85rem; padding: 2rem; background: oklch(0.18 0.05 300 / 0.94); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 8px 8px oklch(0.05 0.03 300 / 0.5); }
 .login-card .logo { align-self: center; font-size: 2rem; }
 .login-card > .muted { margin: 0.2rem 0 0.3rem; text-align: center; }
+.login-credit { margin: 0.1rem 0 -0.4rem; color: var(--dim); font-size: 0.65rem; text-align: center; }
+.login-credit a { color: var(--purple-bright); }
 
 @media (hover: hover) and (pointer: fine) {
   .btn:hover { border-color: var(--purple-bright); background-color: oklch(0.28 0.09 305); }
@@ -257,6 +275,8 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
   .topbar { flex-wrap: wrap; gap: 0.65rem; padding: 0.75rem; }
   .brand-note { display: none; }
   .modes { order: 3; width: 100%; margin-left: 0; overflow-x: auto; }
+  .account { margin-left: auto; }
+  .welcome { font-size: 0.84rem; }
   .modes button { flex: 1 0 auto; }
   .grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "player" "notes" "feed" "campaigns" "tasks"; padding: 0.7rem; }
   .panel { min-width: 0; }
@@ -268,5 +288,6 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .login-video { display: none; }
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }

@@ -56,6 +56,11 @@ document.getElementById('logout')?.addEventListener('click', async () => {
 });
 
 Object.assign(capabilities, await api('/api/capabilities').catch(() => ({})));
+const welcome = document.getElementById('welcome');
+if (welcome && capabilities.welcome) {
+  welcome.textContent = capabilities.welcome;
+  welcome.hidden = false;
+}
 initPlayer();
 initFeed();
 initNotes();

@@ -41,12 +41,16 @@ export function createApp(config = loadConfig()) {
 
   const PUBLIC = new Set(['/login.html', '/favicon.svg']);
   app.use((req, res, next) => {
-    if (PUBLIC.has(req.path) || req.path.startsWith('/css/')) return next();
+    if (PUBLIC.has(req.path) || req.path.startsWith('/css/') || req.path.startsWith('/media/')) return next();
     return auth.requireAuth(req, res, next);
   });
 
   app.get('/api/capabilities', (req, res) =>
-    res.json({ ai: Boolean(config.anthropicKey), subjects: config.content.subjects })
+    res.json({
+      ai: Boolean(config.anthropicKey),
+      subjects: config.content.subjects,
+      welcome: req.user.toLowerCase() === 'nazely' ? 'Welcome VP Nazely' : '',
+    })
   );
 
   app.use('/api/music', musicRoutes(config));

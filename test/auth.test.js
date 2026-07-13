@@ -9,7 +9,7 @@ import { openDb } from '../server/db.js';
 
 function makeApp() {
   const config = loadConfig({
-    EDMISSIONS_USERS: 'tyler:goodpass,friend:otherpass',
+    EDMISSIONS_USERS: 'tyler:goodpass,friend:otherpass,nazely:vppass',
     EDMISSIONS_SESSION_SECRET: 'test-secret',
     EDMISSIONS_DATA_DIR: mkdtempSync(join(tmpdir(), 'edm-')),
   });
@@ -39,7 +39,25 @@ test('valid login sets a guarded session cookie and grants API access', async ()
       headers: { cookie: cookie.split(';')[0] },
     });
     assert.equal(caps.status, 200);
-    assert.equal((await caps.json()).ai, false);
+    const capabilities = await caps.json();
+    assert.equal(capabilities.ai, false);
+    assert.equal(capabilities.welcome, '');
+  } finally {
+    server.close();
+  }
+});
+
+test('Nazely receives the VP welcome and the login video is public', async () => {
+  const { server, base } = makeApp();
+  try {
+    const res = await post(base, '/api/login', { username: 'nazely', password: 'vppass' });
+    const cookie = res.headers.get('set-cookie').split(';')[0];
+    const capabilities = await (await fetch(base + '/api/capabilities', { headers: { cookie } })).json();
+    assert.equal(capabilities.welcome, 'Welcome VP Nazely');
+
+    const video = await fetch(base + '/media/people-at-a-rave-coverr.mp4', { method: 'HEAD' });
+    assert.equal(video.status, 200);
+    assert.match(video.headers.get('content-type'), /video\/mp4/);
   } finally {
     server.close();
   }
