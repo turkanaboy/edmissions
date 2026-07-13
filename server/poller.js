@@ -21,6 +21,13 @@ export function scoreText(title, excerpt, keywords) {
   return score;
 }
 
+export function keepArticleTitle(title) {
+  const text = String(title || '');
+  const looksLikeJob = /\b(job|jobs|hiring|career|position|vacancy|opening|opportunity|seeks?|searching for)\b/i.test(text);
+  if (!looksLikeJob) return true;
+  return /\benrollment\b/i.test(text) && /\b(vp|v\.p\.|vice[- ]president)\b/i.test(text);
+}
+
 export function normalizeItem(item, feed) {
   const isGoogleNews = feed.url.includes('news.google.com');
   let title = stripHtml(item.title || '');
@@ -57,7 +64,7 @@ export async function pollOnce(db, config) {
       const parsed = await parser.parseString(await res.text());
       for (const item of parsed.items || []) {
         const a = normalizeItem(item, feed);
-        if (!a.title || !a.link) continue;
+        if (!a.title || !a.link || !keepArticleTitle(a.title)) continue;
         const score = scoreText(a.title, a.excerpt, config.content.keywords);
         const info = insert.run(a.source, a.title, a.link, a.excerpt, a.published_at, score);
         results.added += Number(info.changes);

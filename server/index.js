@@ -39,7 +39,7 @@ export function createApp(config = loadConfig()) {
   app.post('/api/login', auth.login);
   app.post('/api/logout', auth.logout);
 
-  const PUBLIC = new Set(['/login.html']);
+  const PUBLIC = new Set(['/login.html', '/favicon.svg']);
   app.use((req, res, next) => {
     if (PUBLIC.has(req.path) || req.path.startsWith('/css/')) return next();
     return auth.requireAuth(req, res, next);

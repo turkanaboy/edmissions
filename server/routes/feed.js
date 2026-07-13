@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { pollOnce } from '../poller.js';
+import { keepArticleTitle, pollOnce } from '../poller.js';
 
 export function feedRoutes() {
   const router = Router();
@@ -7,15 +7,23 @@ export function feedRoutes() {
   router.get('/', (req, res) => {
     const db = req.app.locals.db;
     const starredOnly = req.query.starred === '1';
-    // ponytail: 14-day window keeps score-first ranking from pinning stale wins forever;
-    // starred items are exempt so the star list is permanent
-    const rows = starredOnly
+    // ponytail: one query plus a tiny in-process title filter avoids a second job-classification system.
+    const rows = (starredOnly
       ? db.prepare('SELECT * FROM articles WHERE starred = 1 ORDER BY score DESC, COALESCE(published_at, created_at) DESC LIMIT 200').all()
       : db
           .prepare(
-            "SELECT * FROM articles WHERE created_at > datetime('now', '-14 days') ORDER BY score DESC, COALESCE(published_at, created_at) DESC LIMIT 100"
+            `SELECT * FROM articles
+             WHERE datetime(published_at) >= datetime('now', '-30 days')
+                OR (published_at IS NULL AND created_at >= datetime('now', '-7 days'))
+             ORDER BY
+               CASE WHEN score > 0 AND datetime(published_at) >= datetime('now', '-7 days') THEN 0 ELSE 1 END,
+               published_at IS NULL,
+               datetime(COALESCE(published_at, created_at)) DESC
+             LIMIT 300`
           )
-          .all();
+          .all())
+      .filter((article) => keepArticleTitle(article.title))
+      .slice(0, starredOnly ? 200 : 100);
     res.json({ articles: rows });
   });
 

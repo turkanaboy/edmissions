@@ -75,3 +75,27 @@ test('template round-trip: create, list, update', async () => {
     server.close();
   }
 });
+
+test('campus memory is seeded, editable, and included in handoff briefs', async () => {
+  const { server, base } = bootApp();
+  try {
+    const s = await login(base);
+    const seeded = await (await s.get('/api/campaigns/campus')).json();
+    assert.equal(seeded.campus.name, 'Example Technical College');
+
+    const campus = {
+      name: 'North Country Technical College',
+      type: 'Public technical college',
+      location: 'New York State',
+      audience: 'Adult learners and recent graduates',
+      voice: 'Direct and practical',
+      facts: 'Offers evening programs and career coaching.',
+    };
+    assert.equal((await (await s.put('/api/campaigns/campus', campus)).json()).name, campus.name);
+    const brief = await (await s.post('/api/campaigns/brief', FORM)).json();
+    assert.match(brief.output, /North Country Technical College/);
+    assert.match(brief.output, /Offers evening programs/);
+  } finally {
+    server.close();
+  }
+});

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="n" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#b965ff"/><stop offset="1" stop-color="#ff4ecb"/>
+    </linearGradient>
+    <filter id="g"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="64" height="64" rx="13" fill="#0c0517"/>
+  <path d="M9 16h46M9 48h46" stroke="url(#n)" stroke-width="2" opacity=".7" filter="url(#g)"/>
+  <text x="32" y="40" text-anchor="middle" fill="url(#n)" font-family="Arial Black,Arial,sans-serif" font-size="25" font-style="italic" font-weight="900" letter-spacing="-2" filter="url(#g)">EDM</text>
+</svg>

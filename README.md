@@ -1,8 +1,8 @@
 # EDMissions
 
 The rave console for higher ed: open-source EDM with an audio-reactive visualizer,
-an enrollment-ranked news feed, a subject-tagged research hub, a messaging-campaign
-builder, and a task list — one login-gated page.
+an enrollment-ranked news feed, a research chat plus subject-tagged notes, a messaging-campaign
+builder with persistent campus context and optional HTML templates, and a task list — one login-gated page.
 
 ## Quick start (local "lite" run)
 
@@ -28,10 +28,10 @@ and set `EDMISSIONS_JAMENDO_CLIENT_ID`. Each intensity mode then streams from it
 genre pool (see `config/content.json` → `modes`). If Jamendo is ever unreachable,
 the player falls back to the local folder automatically.
 
-### Add AI (summaries + one-shot campaigns)
+### Add AI (research chat, summaries + campaigns)
 
-Set `EDMISSIONS_ANTHROPIC_KEY` (an Anthropic API key) and restart. Summarize
-buttons and "Generate campaign" appear; without the key those controls stay
+Set `EDMISSIONS_ANTHROPIC_KEY` (an Anthropic API key) and restart. Research chat,
+summaries, and text/HTML campaign writing appear; without the key those controls stay
 hidden and everything else works. Costs are negligible at this scale (Haiku,
 capped output).
 

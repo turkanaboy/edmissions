@@ -41,7 +41,18 @@ export function openDb(dataDir) {
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
       body TEXT NOT NULL,
+      html_body TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS campus_profile (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT '',
+      location TEXT NOT NULL DEFAULT '',
+      audience TEXT NOT NULL DEFAULT '',
+      voice TEXT NOT NULL DEFAULT '',
+      facts TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS campaigns (
@@ -51,9 +62,17 @@ export function openDb(dataDir) {
       cta TEXT NOT NULL,
       cta_link TEXT NOT NULL,
       message_count INTEGER NOT NULL,
+      format TEXT NOT NULL DEFAULT 'text',
       output TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+  // Existing installs predate these two additive fields.
+  if (!db.prepare('PRAGMA table_info(campaign_templates)').all().some((c) => c.name === 'html_body')) {
+    db.exec("ALTER TABLE campaign_templates ADD COLUMN html_body TEXT NOT NULL DEFAULT ''");
+  }
+  if (!db.prepare('PRAGMA table_info(campaigns)').all().some((c) => c.name === 'format')) {
+    db.exec("ALTER TABLE campaigns ADD COLUMN format TEXT NOT NULL DEFAULT 'text'");
+  }
   return db;
 }

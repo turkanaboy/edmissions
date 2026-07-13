@@ -1,7 +1,7 @@
 import { api, el, mount, capabilities } from './app.js';
 
 const root = document.getElementById('notes-root');
-const state = { notes: [], filterTag: null, editing: null, busy: false, error: null };
+const state = { notes: [], filterTag: null, editing: null, busy: false, error: null, question: '', chat: [] };
 // read at render time, not module-eval time — capabilities is filled during app init
 const subjects = () => capabilities.subjects || [];
 
@@ -51,6 +51,33 @@ async function summarize(note) {
     state.error = `Summary failed: ${err.message}`;
     render();
   }
+}
+
+async function askResearch() {
+  const question = state.question.trim();
+  if (!question || state.busy) return;
+  state.busy = 'chat';
+  state.error = null;
+  render();
+  try {
+    const { answer } = await api('/api/research/chat', { method: 'POST', body: JSON.stringify({ question }) });
+    state.chat.unshift({ question, answer, saved: false });
+    state.question = '';
+  } catch (err) {
+    state.error = `Research failed: ${err.message}`;
+  }
+  state.busy = false;
+  render();
+}
+
+async function saveAnswer(item) {
+  const saved = await api('/api/notes', {
+    method: 'POST',
+    body: JSON.stringify({ body: `${item.question}\n\n${item.answer}`, tags: ['admissions'] }),
+  }).catch(() => null);
+  if (!saved) return;
+  item.saved = true;
+  await load();
 }
 
 // Feed panel dispatches this when the user hits "+" on an article
@@ -137,6 +164,37 @@ function listView() {
   return el(
     'div',
     {},
+    capabilities.ai
+      ? el(
+          'section',
+          { class: 'research-chat', 'aria-label': 'Research assistant' },
+          el('div', { class: 'chat-heading' },
+            el('div', {}, el('h3', { text: 'Ask the research desk' }), el('p', { text: 'Get practical enrollment ideas, then keep the useful responses as notes.' })),
+            el('span', { class: 'pulse-dot', 'aria-hidden': 'true' })
+          ),
+          el('div', { class: 'chat-composer' },
+            el('textarea', {
+              rows: '2',
+              placeholder: 'What are good ways a technical college can recruit in New York State?',
+              text: state.question,
+              oninput: (e) => (state.question = e.target.value),
+              onkeydown: (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                  e.preventDefault();
+                  askResearch();
+                }
+              },
+            }),
+            el('button', { class: 'btn btn-neon', text: state.busy === 'chat' ? 'Thinking…' : 'Ask', disabled: state.busy ? '' : undefined, onclick: askResearch })
+          ),
+          ...state.chat.map((item) => el('article', { class: 'chat-response' },
+            el('strong', { text: item.question }),
+            el('p', { text: item.answer }),
+            el('button', { class: 'btn btn-ghost', text: item.saved ? 'Saved to notes' : 'Save response to notes', disabled: item.saved ? '' : undefined, onclick: () => saveAnswer(item) })
+          ))
+        )
+      : null,
+    capabilities.ai ? el('div', { class: 'notes-divider' }, el('span', { text: 'Saved notes' })) : null,
     el(
       'div',
       { class: 'row', style: 'flex-wrap:wrap; margin-bottom:.45rem' },

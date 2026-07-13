@@ -2,3 +2,7 @@ node_modules/
 data/
 .env
 *.log
+.agents/
+.claude/
+.codex/
+.impeccable/config.local.json

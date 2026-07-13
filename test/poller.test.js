@@ -4,7 +4,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
-import { pollOnce } from '../server/poller.js';
+import { keepArticleTitle, pollOnce } from '../server/poller.js';
 import { bootApp, login, stubFetch } from './helpers.js';
 
 const RSS = `<?xml version="1.0"?><rss version="2.0"><channel><title>Test</title>
@@ -115,5 +115,28 @@ test('stored articles carry excerpt only, never full text', async () => {
   } finally {
     restore();
     db.close();
+  }
+});
+
+test('job headlines require both a VP variation and enrollment', () => {
+  assert.equal(keepArticleTitle('Director of Admissions job opening'), false);
+  assert.equal(keepArticleTitle('Hiring a VP for Enrollment Strategy'), true);
+  assert.equal(keepArticleTitle('Vice-President enrollment opportunity'), true);
+  assert.equal(keepArticleTitle('Enrollment rebounds at technical colleges'), true);
+});
+
+test('feed ranks recent enrollment first and excludes stale publication dates', async () => {
+  const { server, base, app } = bootApp();
+  try {
+    const s = await login(base);
+    const db = app.locals.db;
+    db.prepare('INSERT INTO articles (source, title, link, published_at, score) VALUES (?, ?, ?, ?, ?)').run('Test', 'Fresh campus news', 'https://ex.com/fresh', new Date().toISOString(), 0);
+    db.prepare('INSERT INTO articles (source, title, link, published_at, score) VALUES (?, ?, ?, ?, ?)').run('Test', 'Enrollment update', 'https://ex.com/enrollment', new Date(Date.now() - 2 * 864e5).toISOString(), 3);
+    db.prepare('INSERT INTO articles (source, title, link, published_at, score) VALUES (?, ?, ?, ?, ?)').run('Test', 'Old enrollment story', 'https://ex.com/old', '2020-01-01T00:00:00.000Z', 20);
+    const { articles } = await (await s.get('/api/articles')).json();
+    assert.equal(articles[0].title, 'Enrollment update');
+    assert.ok(!articles.some((a) => a.title === 'Old enrollment story'));
+  } finally {
+    server.close();
   }
 });

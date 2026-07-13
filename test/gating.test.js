@@ -13,7 +13,8 @@ const FORM = {
 const stubAi = {
   enabled: true,
   summarizeNote: async () => 'A tidy three-sentence summary.',
-  generateCampaign: async (brief, count) => `Generated ${count} messages.\n\n${brief.slice(0, 40)}`,
+  generateCampaign: async (brief, count, format) => `Generated ${count} ${format} messages.\n\n${brief}`,
+  researchAnswer: async (question) => `Try an employer open house for: ${question}`,
 };
 
 test('AE1: without a key, capabilities is ai:false and AI endpoints 503', async () => {
@@ -68,12 +69,35 @@ test('generate persists a campaign with the requested message count', async () =
     const campaign = await res.json();
     assert.equal(campaign.kind, 'generated');
     assert.equal(campaign.message_count, 3);
-    assert.match(campaign.output, /Generated 3 messages/);
+    assert.match(campaign.output, /Generated 3 text messages/);
 
     const { campaigns } = await (await s.get('/api/campaigns')).json();
     assert.equal(campaigns[0].id, campaign.id);
 
     assert.equal((await s.post('/api/campaigns/generate', { ...FORM, message_count: 0 })).status, 400);
+  } finally {
+    server.close();
+  }
+});
+
+test('HTML campaigns use the saved scaffold and research answers can be saved as notes', async () => {
+  const { server, base, app } = bootApp({ EDMISSIONS_ANTHROPIC_KEY: 'test-key' });
+  app.locals.ai = stubAi;
+  try {
+    const s = await login(base);
+    const { templates } = await (await s.get('/api/campaigns/templates')).json();
+    await s.put(`/api/campaigns/templates/${templates[0].id}`, {
+      html_body: '<html><h1>{{subject}}</h1><p>{{body}}</p><a href="{{cta_link}}">{{cta}}</a></html>',
+    });
+    const campaign = await (await s.post('/api/campaigns/generate', { ...FORM, output_format: 'html' })).json();
+    assert.equal(campaign.format, 'html');
+    assert.match(campaign.output, /Generated 3 html messages/);
+    assert.match(campaign.output, /<html>/);
+
+    const research = await (await s.post('/api/research/chat', { question: 'How can technical colleges recruit adult learners?' })).json();
+    assert.match(research.answer, /employer open house/);
+    const note = await (await s.post('/api/notes', { body: research.answer, tags: ['admissions'] })).json();
+    assert.equal(note.body, research.answer);
   } finally {
     server.close();
   }
@@ -87,6 +111,9 @@ test('AI failures return 502 without leaking detail', async () => {
       throw Object.assign(new Error('upstream'), { status: 529 });
     },
     generateCampaign: async () => {
+      throw new Error('upstream');
+    },
+    researchAnswer: async () => {
       throw new Error('upstream');
     },
   };

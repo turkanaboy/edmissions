@@ -8,6 +8,12 @@ export function seedTemplates(db, config) {
       config.content.defaultCampaignTemplate
     );
   }
+  const campus = config.content.defaultCampus;
+  if (campus) {
+    db.prepare(
+      'INSERT OR IGNORE INTO campus_profile (id, name, type, location, audience, voice, facts) VALUES (1, ?, ?, ?, ?, ?, ?)'
+    ).run(campus.name, campus.type, campus.location, campus.audience, campus.voice, campus.facts);
+  }
 }
 
 export function renderTemplate(body, fields) {
@@ -42,8 +48,34 @@ export function pickTemplate(db, templateId) {
     : db.prepare('SELECT * FROM campaign_templates ORDER BY id LIMIT 1').get();
 }
 
+export function campaignFields(db, fields) {
+  const campus = db.prepare('SELECT * FROM campus_profile WHERE id = 1').get();
+  const campusText = campus
+    ? `Name: ${campus.name}\nType: ${campus.type}\nLocation: ${campus.location}\nAudience: ${campus.audience}\nVoice: ${campus.voice}\nApproved facts: ${campus.facts}`
+    : 'No campus profile supplied.';
+  return { ...fields, campus: campusText };
+}
+
 export function campaignRoutes() {
   const router = Router();
+
+  router.get('/campus', (req, res) => {
+    res.json({ campus: req.app.locals.db.prepare('SELECT * FROM campus_profile WHERE id = 1').get() || null });
+  });
+
+  router.put('/campus', (req, res) => {
+    const fields = ['name', 'type', 'location', 'audience', 'voice', 'facts'];
+    const values = fields.map((field) => String(req.body?.[field] || '').trim());
+    if (!values[0]) return res.status(400).json({ error: 'Campus name is required' });
+    const db = req.app.locals.db;
+    db.prepare(
+      `INSERT INTO campus_profile (id, name, type, location, audience, voice, facts)
+       VALUES (1, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET name=excluded.name, type=excluded.type, location=excluded.location,
+       audience=excluded.audience, voice=excluded.voice, facts=excluded.facts`
+    ).run(...values);
+    res.json(db.prepare('SELECT * FROM campus_profile WHERE id = 1').get());
+  });
 
   // template routes registered before /:id so "templates" never matches as an id
   router.get('/templates', (req, res) => {
@@ -51,10 +83,10 @@ export function campaignRoutes() {
   });
 
   router.post('/templates', (req, res) => {
-    const { name, body } = req.body || {};
+    const { name, body, html_body = '' } = req.body || {};
     if (!name || !body) return res.status(400).json({ error: 'Template name and body are required' });
     const db = req.app.locals.db;
-    const info = db.prepare('INSERT INTO campaign_templates (name, body) VALUES (?, ?)').run(name, body);
+    const info = db.prepare('INSERT INTO campaign_templates (name, body, html_body) VALUES (?, ?, ?)').run(name, body, html_body);
     res.status(201).json(db.prepare('SELECT * FROM campaign_templates WHERE id = ?').get(info.lastInsertRowid));
   });
 
@@ -62,8 +94,8 @@ export function campaignRoutes() {
     const db = req.app.locals.db;
     const existing = db.prepare('SELECT * FROM campaign_templates WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'No such template' });
-    const { name = existing.name, body = existing.body } = req.body || {};
-    db.prepare('UPDATE campaign_templates SET name = ?, body = ? WHERE id = ?').run(name, body, req.params.id);
+    const { name = existing.name, body = existing.body, html_body = existing.html_body } = req.body || {};
+    db.prepare('UPDATE campaign_templates SET name = ?, body = ?, html_body = ? WHERE id = ?').run(name, body, html_body, req.params.id);
     res.json(db.prepare('SELECT * FROM campaign_templates WHERE id = ?').get(req.params.id));
   });
 
@@ -77,10 +109,10 @@ export function campaignRoutes() {
     const db = req.app.locals.db;
     const tpl = pickTemplate(db, req.body.template_id);
     if (!tpl) return res.status(400).json({ error: 'No template available' });
-    const output = renderTemplate(tpl.body, fields);
+    const output = renderTemplate(tpl.body, campaignFields(db, fields));
     const info = db
-      .prepare('INSERT INTO campaigns (kind, purpose, cta, cta_link, message_count, output) VALUES (?, ?, ?, ?, ?, ?)')
-      .run('brief', fields.purpose, fields.cta, fields.cta_link, fields.message_count, output);
+      .prepare('INSERT INTO campaigns (kind, purpose, cta, cta_link, message_count, format, output) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run('brief', fields.purpose, fields.cta, fields.cta_link, fields.message_count, 'brief', output);
     res.status(201).json(db.prepare('SELECT * FROM campaigns WHERE id = ?').get(info.lastInsertRowid));
   });
 

@@ -4,14 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>EDMissions — log in</title>
+  <meta name="theme-color" content="#10051f">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/app.css">
 </head>
 <body class="login-body">
   <form id="login-form" class="login-card">
-    <h1 class="logo">ED<span>Missions</span></h1>
+    <h1 class="logo" aria-label="EDMissions"><span class="logo-edm">EDM</span><span class="logo-issions">issions</span></h1>
     <p class="muted">the rave console for higher ed</p>
-    <input name="username" placeholder="username" autocomplete="username" required>
-    <input name="password" type="password" placeholder="password" autocomplete="current-password" required>
+    <label class="field"><span>Username</span><input name="username" autocomplete="username" required></label>
+    <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password" required></label>
     <button class="btn btn-neon" type="submit">Enter the console</button>
     <p id="login-error" class="error" hidden></p>
   </form>

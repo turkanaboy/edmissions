@@ -6,6 +6,7 @@ const MODEL = 'claude-haiku-4-5';
 const SUMMARY_MAX_TOKENS = 500;
 const CAMPAIGN_TOKENS_PER_MESSAGE = 350;
 const CAMPAIGN_MAX_TOKENS_CEILING = 8000;
+const RESEARCH_MAX_TOKENS = 1200;
 
 export function createAi(config) {
   const enabled = Boolean(config.anthropicKey);
@@ -39,13 +40,20 @@ export function createAi(config) {
       return complete(prompt, SUMMARY_MAX_TOKENS);
     },
 
-    async generateCampaign(briefText, messageCount) {
+    async generateCampaign(briefText, messageCount, format = 'text') {
       const maxTokens = Math.min(
         SUMMARY_MAX_TOKENS + CAMPAIGN_TOKENS_PER_MESSAGE * messageCount,
         CAMPAIGN_MAX_TOKENS_CEILING
       );
-      const prompt = `${briefText}\n\nProduce the complete campaign now, plain text, no preamble.`;
+      const prompt = `${briefText}\n\nProduce the complete campaign now, ${format === 'html' ? 'valid HTML' : 'plain text'}, no preamble.`;
       return complete(prompt, maxTokens);
+    },
+
+    async researchAnswer(question) {
+      const prompt =
+        'Answer this question for a higher-education enrollment professional. Give 5-7 practical, specific suggestions, note assumptions, and finish with 2 useful next questions. Do not invent statistics or institutional facts. Plain text only, no preamble.\n\n' +
+        `Question: ${question}`;
+      return complete(prompt, RESEARCH_MAX_TOKENS);
     },
   };
 }
