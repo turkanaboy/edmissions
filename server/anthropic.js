@@ -49,10 +49,16 @@ export function createAi(config) {
       return complete(prompt, maxTokens);
     },
 
-    async researchAnswer(question) {
+    async researchAnswer(question, history = []) {
+      const context = history.length
+        ? `Previous conversation, oldest first:\n\n${history
+            .map(({ question: previousQuestion, answer }, index) => `Exchange ${index + 1}\nQuestion: ${previousQuestion}\nAnswer: ${answer}`)
+            .join('\n\n')}\n\n`
+        : '';
       const prompt =
-        'Answer this question for a higher-education enrollment professional. Give 5-7 practical, specific suggestions, note assumptions, and finish with 2 useful next questions. Do not invent statistics or institutional facts. Plain text only, no preamble.\n\n' +
-        `Question: ${question}`;
+        'Answer this question for a higher-education enrollment professional. Use the previous conversation to understand follow-up references and avoid needless repetition. Give practical, specific suggestions, note assumptions, and finish with 2 useful next questions. Do not invent statistics or institutional facts. Plain text only, no preamble.\n\n' +
+        context +
+        `Current question: ${question}`;
       return complete(prompt, RESEARCH_MAX_TOKENS);
     },
   };

@@ -1,5 +1,11 @@
 import { announce, api, el, mount, restoreFocus, capabilities } from './app.js';
-import { addResponse, clearResponse, markResponseSaved } from './research-chat-state.js';
+import {
+  addResponse,
+  buildResearchHandoff,
+  clearResponse,
+  markResponseSaved,
+  recentResearchHistory,
+} from './research-chat-state.js';
 
 const root = document.getElementById('notes-root');
 const state = { notes: [], filterTag: null, editing: null, busy: false, error: null, question: '', chat: [] };
@@ -65,7 +71,10 @@ async function askResearch() {
   render('research-question');
   let added = false;
   try {
-    const { answer } = await api('/api/research/chat', { method: 'POST', body: JSON.stringify({ question }) });
+    const { answer } = await api('/api/research/chat', {
+      method: 'POST',
+      body: JSON.stringify({ question, history: recentResearchHistory(state.chat) }),
+    });
     state.chat = addResponse(state.chat, question, answer);
     state.question = '';
     added = true;
@@ -97,6 +106,17 @@ async function saveAnswer(item) {
   state.chat = markResponseSaved(state.chat, item);
   await load(`research-clear-${itemIndex}`);
   announce('Research response saved to notes.');
+}
+
+async function continueInChatGpt() {
+  window.open('https://chatgpt.com/', '_blank', 'noopener,noreferrer');
+  try {
+    await navigator.clipboard.writeText(buildResearchHandoff(state.chat, state.question));
+    announce('Conversation copied. Paste it into the new ChatGPT chat.');
+  } catch {
+    state.error = 'ChatGPT opened, but the conversation could not be copied. Check clipboard permission and try again.';
+    render('research-handoff');
+  }
 }
 
 // Feed panel dispatches this when the user hits "+" on an article
@@ -239,7 +259,21 @@ function listView() {
                 },
               })
             )
-          ))
+          )),
+          state.chat.length
+            ? el(
+                'div',
+                { class: 'row', style: 'margin-top:.72rem; flex-wrap:wrap' },
+                el('button', {
+                  class: 'btn',
+                  'data-focus': 'research-handoff',
+                  text: 'Continue in ChatGPT ↗',
+                  title: 'Copy this conversation and open a new ChatGPT chat',
+                  onclick: continueInChatGpt,
+                }),
+                el('span', { class: 'muted', text: 'Copies this chat so you can paste it there.' })
+              )
+            : null
         )
       : null,
     capabilities.ai ? el('div', { class: 'notes-divider' }, el('span', { text: 'Saved notes' })) : null,

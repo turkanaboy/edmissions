@@ -41,10 +41,19 @@ export function aiRoutes() {
   router.post('/research/chat', async (req, res) => {
     if (!guard(req, res)) return;
     const question = String(req.body?.question || '').trim();
+    const history = Array.isArray(req.body?.history) ? req.body.history : [];
     if (!question) return res.status(400).json({ error: 'Question is required' });
     if (question.length > 2000) return res.status(400).json({ error: 'Question is too long' });
+    if (history.length > 5) return res.status(400).json({ error: 'Research history is too long' });
+    const cleanHistory = history.map((item) => ({
+      question: String(item?.question || '').trim(),
+      answer: String(item?.answer || '').trim(),
+    }));
+    if (cleanHistory.some((item) => !item.question || !item.answer || item.question.length > 2000 || item.answer.length > 10000)) {
+      return res.status(400).json({ error: 'Research history is invalid' });
+    }
     try {
-      res.json({ answer: await req.app.locals.ai.researchAnswer(question) });
+      res.json({ answer: await req.app.locals.ai.researchAnswer(question, cleanHistory) });
     } catch (err) {
       logAiError('research chat', null, err);
       res.status(502).json({ error: 'AI request failed — try again' });

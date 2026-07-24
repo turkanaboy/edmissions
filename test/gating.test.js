@@ -82,7 +82,14 @@ test('generate persists a campaign with the requested message count', async () =
 
 test('HTML campaigns use the saved scaffold and research answers can be saved as notes', async () => {
   const { server, base, app } = bootApp({ EDMISSIONS_ANTHROPIC_KEY: 'test-key' });
-  app.locals.ai = stubAi;
+  let receivedHistory;
+  app.locals.ai = {
+    ...stubAi,
+    researchAnswer: async (question, history) => {
+      receivedHistory = history;
+      return `Try an employer open house for: ${question}`;
+    },
+  };
   try {
     const s = await login(base);
     const { templates } = await (await s.get('/api/campaigns/templates')).json();
@@ -94,8 +101,17 @@ test('HTML campaigns use the saved scaffold and research answers can be saved as
     assert.match(campaign.output, /Generated 3 html messages/);
     assert.match(campaign.output, /<html>/);
 
-    const research = await (await s.post('/api/research/chat', { question: 'How can technical colleges recruit adult learners?' })).json();
+    const history = [{ question: 'What should we try?', answer: 'Try an open house.' }];
+    const research = await (await s.post('/api/research/chat', {
+      question: 'How can technical colleges recruit adult learners?',
+      history,
+    })).json();
     assert.match(research.answer, /employer open house/);
+    assert.deepEqual(receivedHistory, history);
+    assert.equal((await s.post('/api/research/chat', {
+      question: 'Too much history',
+      history: Array(6).fill(history[0]),
+    })).status, 400);
     const note = await (await s.post('/api/notes', { body: research.answer, tags: ['admissions'] })).json();
     assert.equal(note.body, research.answer);
   } finally {
