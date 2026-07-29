@@ -49,7 +49,7 @@ export function createApp(config = loadConfig()) {
     res.json({
       ai: Boolean(config.anthropicKey),
       subjects: config.content.subjects,
-      welcome: req.user.toLowerCase() === 'nazely' ? 'Welcome VP Nazely' : '',
+      welcome: req.user.toLowerCase() === 'nazely' ? 'Welcome AVP Nazely' : '',
     })
   );
 

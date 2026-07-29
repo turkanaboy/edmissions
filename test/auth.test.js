@@ -47,13 +47,13 @@ test('valid login sets a guarded session cookie and grants API access', async ()
   }
 });
 
-test('Nazely receives the VP welcome and the login video is public', async () => {
+test('Nazely receives the AVP welcome and the login video is public', async () => {
   const { server, base } = makeApp();
   try {
     const res = await post(base, '/api/login', { username: 'nazely', password: 'vppass' });
     const cookie = res.headers.get('set-cookie').split(';')[0];
     const capabilities = await (await fetch(base + '/api/capabilities', { headers: { cookie } })).json();
-    assert.equal(capabilities.welcome, 'Welcome VP Nazely');
+    assert.equal(capabilities.welcome, 'Welcome AVP Nazely');
 
     const video = await fetch(base + '/media/people-at-a-rave-coverr.mp4', { method: 'HEAD' });
     assert.equal(video.status, 200);
