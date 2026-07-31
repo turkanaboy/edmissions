@@ -39,21 +39,18 @@ campaigns and research answers.
 
 ### Data Command Center
 
-The dashboard can import aggregate Slate snapshots and refresh a cached SUNY
-Delhi enrollment trend from New York Open Data. Slate CSV files must be 200 KB
-or smaller and contain exactly these columns:
+The dashboard can fetch an aggregate Slate query on demand and refresh a cached
+SUNY Delhi enrollment trend from New York Open Data. Paste the Slate web service
+URL into the Data Command Center and select **Fetch from Slate**. The endpoint
+must use HTTPS on a `delhi.edu` or `technolutions.net` host and return either a
+JSON array of row objects or a CSV table.
 
-```csv
-term,stage,program,residency,geography,source,count,prior_year_count,goal
-Fall 2026,Applicant,Nursing,In-state,New York,Web,120,108,140
-```
-
-`count` is required. `prior_year_count` and `goal` may be blank; all other
-fields are required. Imports with identity-bearing or unexpected columns are
-rejected before any snapshot is stored. Raw CSV text is discarded after
-validation; only normalized aggregate rows and snapshot metadata are retained.
-SUNY refreshes are manual, cached for 24 hours, and keep the last good snapshot
-when the official source is unavailable.
+Slate responses are limited to 1 MB, 1,000 rows, and 50 columns. Queries with
+identity-bearing columns such as names, IDs, emails, birth dates, phone numbers,
+or addresses are rejected. The endpoint URL and returned table are processed
+only for that request and are never written to SQLite. SUNY public-data refreshes
+remain manual, cached for 24 hours, and keep the last good snapshot when the
+official source is unavailable.
 
 ## The modes
 

@@ -142,6 +142,8 @@ export function openDb(dataDir) {
       measure TEXT NOT NULL DEFAULT ''
     );
   `);
+  // Slate web-service results are transient; remove snapshots from the retired CSV importer.
+  db.prepare("DELETE FROM data_snapshots WHERE kind = 'slate'").run();
   const addColumns = (table, additions) => {
     const columns = new Set(db.prepare(`PRAGMA table_info(${table})`).all().map((column) => column.name));
     for (const [name, definition] of Object.entries(additions)) {

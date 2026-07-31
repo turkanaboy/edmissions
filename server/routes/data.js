@@ -1,19 +1,12 @@
 import { Router } from 'express';
-import { isDate, isWebUrl } from './campaigns.js';
 
-const MAX_CSV_CHARS = 200_000;
-const MAX_ROWS = 2_000;
-const SLATE_HEADERS = [
-  'term',
-  'stage',
-  'program',
-  'residency',
-  'geography',
-  'source',
-  'count',
-  'prior_year_count',
-  'goal',
-];
+const MAX_SLATE_BYTES = 1_000_000;
+const MAX_SLATE_ROWS = 1_000;
+const MAX_SLATE_COLUMNS = 50;
+const MAX_SLATE_REDIRECTS = 3;
+const SLATE_HOST_SUFFIXES = ['delhi.edu', 'technolutions.net'];
+const PERSON_LEVEL_COLUMNS = new Set(['id', 'guid', 'name']);
+const PERSON_LEVEL_COLUMN = /(^|_)(email|e_mail|student_?id|person_?id|record_?id|first_?name|last_?name|full_?name|preferred_?name|birth_?date|date_?of_?birth|dob|phone(?:_?number)?|mobile|(?:street|mailing|home)_?address)(_|$)/;
 const SUNY_SOURCE_URL = 'https://data.ny.gov/Education/Headcount-Enrollment-by-Student-Level-and-Student-/4fyc-bf8i';
 const SUNY_API_URL = 'https://data.ny.gov/resource/4fyc-bf8i.json';
 const SUNY_SOURCE_LABEL = 'SUNY System Administration, Office of Institutional Research';
@@ -128,74 +121,150 @@ const aggregateNumber = (value, label, optional = false) => {
   return number;
 };
 
-export function parseSlateCsv(csv) {
-  if (typeof csv !== 'string' || !csv.trim()) throw new Error('Choose a CSV file to import');
-  if (Buffer.byteLength(csv, 'utf8') > MAX_CSV_CHARS) throw new Error('CSV must be 200 KB or smaller');
-  const rows = parseCsv(csv);
-  if (rows.length < 2) throw new Error('CSV needs a header and at least one data row');
-  if (rows.length - 1 > MAX_ROWS) throw new Error(`CSV cannot exceed ${MAX_ROWS} aggregate rows`);
-
-  const headers = rows[0].map(normalizeHeader);
-  if (headers.some((header) => /(^|_)(email|e_mail|student_id|studentid|first_name|last_name|full_name|name|birth_date|dob|phone|address)(_|$)/.test(header))) {
-    throw new Error('CSV appears to contain personally identifiable information');
+export function normalizeSlateEndpoint(value) {
+  let url;
+  try {
+    url = new URL(String(value || '').trim());
+  } catch {
+    throw new Error('Slate web service URL is invalid');
   }
-  if (new Set(headers).size !== headers.length
-    || headers.length !== SLATE_HEADERS.length
-    || SLATE_HEADERS.some((header) => !headers.includes(header))) {
-    throw new Error(`CSV headers must be exactly: ${SLATE_HEADERS.join(', ')}`);
+  const host = url.hostname.toLowerCase().replace(/\.$/, '');
+  const allowed = SLATE_HOST_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+  if (url.protocol !== 'https:' || !allowed || url.username || url.password) {
+    throw new Error('Slate web service URL must use HTTPS on a SUNY Delhi or Technolutions host');
   }
+  return url;
+}
 
-  return rows.slice(1).map((values, index) => {
-    if (values.length !== headers.length) throw new Error(`CSV row ${index + 2} has the wrong number of columns`);
-    const value = Object.fromEntries(headers.map((header, column) => [header, values[column]]));
-    return {
-      term: textField(value.term, `Row ${index + 2} term`),
-      stage: textField(value.stage, `Row ${index + 2} stage`),
-      program: textField(value.program, `Row ${index + 2} program`),
-      residency: textField(value.residency, `Row ${index + 2} residency`),
-      geography: textField(value.geography, `Row ${index + 2} geography`),
-      source: textField(value.source, `Row ${index + 2} source`),
-      count: aggregateNumber(value.count, `Row ${index + 2} count`),
-      prior_year_count: aggregateNumber(value.prior_year_count, `Row ${index + 2} prior_year_count`, true),
-      goal: aggregateNumber(value.goal, `Row ${index + 2} goal`, true),
-    };
-  });
+function assertAggregateColumns(columns) {
+  if (!columns.length || columns.length > MAX_SLATE_COLUMNS) {
+    throw new Error(`Slate response must contain between 1 and ${MAX_SLATE_COLUMNS} columns`);
+  }
+  if (columns.some((column) => {
+    const header = normalizeHeader(column);
+    return PERSON_LEVEL_COLUMNS.has(header) || PERSON_LEVEL_COLUMN.test(header);
+  })) {
+    throw new Error('Slate response must be aggregate-only; remove person-level columns from the query');
+  }
+}
+
+const cellText = (value) => {
+  if (value === null || value === undefined) return '';
+  return typeof value === 'object' ? JSON.stringify(value) : String(value);
+};
+
+function tableFromJson(value) {
+  const rows = Array.isArray(value)
+    ? value
+    : ['rows', 'data', 'results'].map((key) => value?.[key]).find(Array.isArray);
+  if (!rows) throw new Error('Slate JSON response must contain an array of rows');
+  if (rows.length > MAX_SLATE_ROWS) {
+    throw new Error(`Slate query must return ${MAX_SLATE_ROWS} rows or fewer`);
+  }
+  if (!rows.length) {
+    const columns = Array.isArray(value?.columns) ? value.columns.map(String) : [];
+    if (columns.length) assertAggregateColumns(columns);
+    return { columns, rows: [] };
+  }
+  if (rows.every(Array.isArray)) {
+    const width = Math.max(...rows.map((row) => row.length));
+    const columns = Array.isArray(value?.columns) && value.columns.length === width
+      ? value.columns.map(String)
+      : Array.from({ length: width }, (_, index) => `Column ${index + 1}`);
+    assertAggregateColumns(columns);
+    return { columns, rows: rows.map((row) => columns.map((_, index) => cellText(row[index]))) };
+  }
+  if (!rows.every((row) => row && typeof row === 'object' && !Array.isArray(row))) {
+    throw new Error('Slate JSON rows must be objects or arrays');
+  }
+  const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+  assertAggregateColumns(columns);
+  return { columns, rows: rows.map((row) => columns.map((column) => cellText(row[column]))) };
+}
+
+function tableFromCsv(text) {
+  const parsed = parseCsv(text);
+  if (!parsed.length) throw new Error('Slate returned an empty table');
+  const columns = parsed[0].map((column, index) => String(column || '').trim() || `Column ${index + 1}`);
+  assertAggregateColumns(columns);
+  const rows = parsed.slice(1);
+  if (rows.length > MAX_SLATE_ROWS) throw new Error(`Slate query must return ${MAX_SLATE_ROWS} rows or fewer`);
+  if (rows.some((row) => row.length !== columns.length)) throw new Error('Slate CSV rows have inconsistent columns');
+  return { columns, rows: rows.map((row) => row.map(cellText)) };
+}
+
+function parseSlateTable(text, contentType) {
+  const trimmed = text.trim();
+  if (/html|xml/i.test(contentType) || trimmed.startsWith('<')) {
+    throw new Error('Slate web service must return JSON or CSV, not HTML or XML');
+  }
+  if (/json/i.test(contentType) || /^[\[{]/.test(trimmed)) {
+    try {
+      return tableFromJson(JSON.parse(trimmed));
+    } catch (error) {
+      if (error.message.startsWith('Slate ')) throw error;
+      throw new Error('Slate returned invalid JSON');
+    }
+  }
+  return tableFromCsv(text);
+}
+
+async function readLimitedText(response) {
+  const length = Number(response.headers.get('content-length') || 0);
+  if (length > MAX_SLATE_BYTES) throw new Error('Slate response must be 1 MB or smaller');
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = '';
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    bytes += value.byteLength;
+    if (bytes > MAX_SLATE_BYTES) {
+      await reader.cancel();
+      throw new Error('Slate response must be 1 MB or smaller');
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
+}
+
+export async function fetchSlateTable(endpoint, redirects = 0) {
+  const url = normalizeSlateEndpoint(endpoint);
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: { Accept: 'application/json, text/csv;q=0.9, text/plain;q=0.8' },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch {
+    throw new Error('Slate web service could not be reached');
+  }
+  if ([301, 302, 303, 307, 308].includes(response.status)) {
+    if (redirects >= MAX_SLATE_REDIRECTS) throw new Error('Slate web service redirected too many times');
+    const location = response.headers.get('location');
+    if (!location) throw new Error('Slate web service returned an invalid redirect');
+    await response.body?.cancel();
+    return fetchSlateTable(new URL(location, url), redirects + 1);
+  }
+  if (!response.ok) throw new Error(`Slate web service returned HTTP ${response.status}`);
+  const table = parseSlateTable(
+    await readLimitedText(response),
+    response.headers.get('content-type') || ''
+  );
+  return {
+    ...table,
+    row_count: table.rows.length,
+    retrieved_at: new Date().toISOString(),
+  };
 }
 
 const snapshotRecord = (row) => row ? { ...row, id: Number(row.id) } : null;
 
 const latestSnapshot = (db, kind) =>
   snapshotRecord(db.prepare('SELECT * FROM data_snapshots WHERE kind = ? ORDER BY id DESC LIMIT 1').get(kind));
-
-function slateCards(db, snapshot) {
-  if (!snapshot) return [];
-  return db.prepare(
-    `SELECT term, stage, SUM(count) AS count, SUM(prior_year_count) AS prior_year_count, SUM(goal) AS goal
-     FROM data_points WHERE snapshot_id = ? GROUP BY term, stage ORDER BY term DESC, stage`
-  ).all(snapshot.id).map((point) => {
-    const dimensions = `Term: ${point.term}; stage: ${point.stage}; summed across program, residency, geography, and source`;
-    return {
-      title: `${point.stage} · ${point.term}`,
-      count: Number(point.count),
-      prior_year_count: point.prior_year_count === null ? null : Number(point.prior_year_count),
-      goal: point.goal === null ? null : Number(point.goal),
-      source_context: {
-        title: `${point.stage} · ${point.term}`,
-        publisher: snapshot.source_label,
-        published_at: snapshot.as_of,
-        url: snapshot.source_url,
-        excerpt: `${Number(point.count).toLocaleString()} records in this aggregate Slate snapshot.`,
-        lane: 'campus',
-        dataset: snapshot.label,
-        measure: point.stage,
-        term: point.term,
-        dimensions,
-        as_of: snapshot.as_of,
-        source_label: snapshot.source_label,
-      },
-    };
-  });
-}
 
 function sunyCards(db, snapshot) {
   if (!snapshot) return [];
@@ -237,45 +306,12 @@ function sunyCards(db, snapshot) {
   });
 }
 
-function bundle(db, kind) {
-  const snapshot = latestSnapshot(db, kind);
+function sunyBundle(db) {
+  const snapshot = latestSnapshot(db, 'suny_enrollment');
   return {
     snapshot,
-    cards: kind === 'slate' ? slateCards(db, snapshot) : sunyCards(db, snapshot),
+    cards: sunyCards(db, snapshot),
   };
-}
-
-function insertSlateSnapshot(db, metadata, rows) {
-  db.exec('BEGIN');
-  try {
-    const info = db.prepare(
-      `INSERT INTO data_snapshots (kind, label, as_of, source_label, source_url, refreshed_at)
-       VALUES ('slate', ?, ?, ?, ?, ?)`
-    ).run(metadata.label, metadata.as_of, metadata.source_label, metadata.source_url, new Date().toISOString());
-    const insert = db.prepare(
-      `INSERT INTO data_points
-       (snapshot_id, term, stage, program, residency, geography, source, count, prior_year_count, goal)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    );
-    for (const row of rows) {
-      insert.run(
-        info.lastInsertRowid,
-        row.term,
-        row.stage,
-        row.program,
-        row.residency,
-        row.geography,
-        row.source,
-        row.count,
-        row.prior_year_count,
-        row.goal
-      );
-    }
-    db.exec('COMMIT');
-  } catch (error) {
-    db.exec('ROLLBACK');
-    throw error;
-  }
 }
 
 function parseSunyRows(rows) {
@@ -343,7 +379,7 @@ function insertSunySnapshot(db, rows, refreshedAt) {
 export async function refreshSunyEnrollment(db, now = new Date()) {
   const latest = latestSnapshot(db, 'suny_enrollment');
   if (latest?.status === 'fresh' && Date.parse(latest.refreshed_at) >= now.valueOf() - 86_400_000) {
-    return { ...bundle(db, 'suny_enrollment'), skipped: true, stale: false };
+    return { ...sunyBundle(db), skipped: true, stale: false };
   }
   try {
     const url = new URL(SUNY_API_URL);
@@ -356,12 +392,12 @@ export async function refreshSunyEnrollment(db, now = new Date()) {
     const rows = parseSunyRows(await response.json());
     const refreshedAt = now.toISOString();
     insertSunySnapshot(db, rows, refreshedAt);
-    return { ...bundle(db, 'suny_enrollment'), skipped: false, stale: false };
+    return { ...sunyBundle(db), skipped: false, stale: false };
   } catch (error) {
     if (!latest) throw error;
     db.prepare("UPDATE data_snapshots SET status = 'stale' WHERE id = ?").run(latest.id);
     return {
-      ...bundle(db, 'suny_enrollment'),
+      ...sunyBundle(db),
       skipped: false,
       stale: true,
       warning: 'Refresh failed; showing the last saved SUNY snapshot.',
@@ -375,35 +411,26 @@ export function dataRoutes() {
   router.get('/', (req, res) => {
     const db = req.app.locals.db;
     res.json({
-      slate: bundle(db, 'slate'),
-      suny: bundle(db, 'suny_enrollment'),
+      suny: sunyBundle(db),
       sources: officialDataSources,
     });
   });
 
-  router.post('/slate', (req, res) => {
-    const label = String(req.body?.label || 'Slate aggregate snapshot').trim();
-    const asOf = String(req.body?.as_of || '').trim();
-    const sourceLabel = String(req.body?.source_label || 'Slate aggregate export').trim();
-    const sourceUrl = String(req.body?.source_url || '').trim();
-    if (!label || label.length > 200 || !sourceLabel || sourceLabel.length > 200) {
-      return res.status(400).json({ error: 'Snapshot and source labels are required and must be 200 characters or less' });
-    }
-    if (!isDate(asOf)) return res.status(400).json({ error: 'As-of date must be a valid date' });
-    if (sourceUrl && !isWebUrl(sourceUrl)) return res.status(400).json({ error: 'Source URL must use http or https' });
-    let rows;
+  router.post('/slate/fetch', async (req, res) => {
+    let endpoint;
     try {
-      rows = parseSlateCsv(req.body?.csv);
+      endpoint = normalizeSlateEndpoint(req.body?.url);
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
-    insertSlateSnapshot(req.app.locals.db, {
-      label,
-      as_of: asOf,
-      source_label: sourceLabel,
-      source_url: sourceUrl,
-    }, rows);
-    res.status(201).json(bundle(req.app.locals.db, 'slate'));
+    try {
+      res.json(await fetchSlateTable(endpoint));
+    } catch (error) {
+      const message = error.message.startsWith('Slate ')
+        ? error.message
+        : 'Slate web service could not be read';
+      res.status(502).json({ error: message });
+    }
   });
 
   router.post('/suny/refresh', async (req, res) => {

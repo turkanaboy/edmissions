@@ -34,7 +34,7 @@ export function feedRoutes() {
        LIMIT 300`
     )
       .all(...params)
-      .filter((article) => keepArticleTitle(article.title))
+      .filter((article) => keepArticleTitle(article.title, article.lane))
       .slice(0, starredOnly ? 200 : 100);
     const configuredSources = new Set(req.app.locals.config.content.feeds.map((feed) => feed.name));
     res.json({

@@ -23,8 +23,12 @@ export function scoreText(title, excerpt, keywords) {
   return score;
 }
 
-export function keepArticleTitle(title) {
+export function keepArticleTitle(title, lane = '') {
   const text = String(title || '');
+  if (lane === 'local' && (
+    /^public notices?\b/i.test(text)
+    || /\b(arrest(?:s|ed)?|shootings?|stabbings?|stabbed|dwi|dui|murders?|homicides?|assaults?|robber(?:y|ies)|burglar(?:y|ies)|charged with|police blotter)\b/i.test(text)
+  )) return false;
   const looksLikeJob = /\b(job|jobs|hiring|career|position|vacancy|opening|opportunity|seeks?|searching for)\b/i.test(text);
   if (!looksLikeJob) return true;
   return /\benrollment\b/i.test(text) && /\b(vp|v\.p\.|vice[- ]president)\b/i.test(text);
@@ -73,7 +77,7 @@ export async function pollOnce(db, config) {
       const parsed = await parser.parseString(await res.text());
       for (const item of parsed.items || []) {
         const a = normalizeItem(item, feed);
-        if (!a.title || !a.link || !keepArticleTitle(a.title)) continue;
+        if (!a.title || !a.link || !keepArticleTitle(a.title, a.lane)) continue;
         const score = scoreText(a.title, a.excerpt, config.content.keywords);
         const info = insert.run(a.source, a.lane, a.title, a.link, a.excerpt, a.published_at, score);
         results.added += Number(info.changes);

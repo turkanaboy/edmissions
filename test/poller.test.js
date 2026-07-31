@@ -146,6 +146,45 @@ test('job headlines require both a VP variation and enrollment', () => {
   assert.equal(keepArticleTitle('Enrollment rebounds at technical colleges'), true);
 });
 
+test('local headlines exclude public notices and crime incidents', () => {
+  for (const title of [
+    'Public Notices | July 30, 2026',
+    'Two arrests follow downtown investigation',
+    'Police investigate a shooting in Delaware County',
+    'Police respond to two shootings',
+    'Man charged after stabbing',
+    'Weekend robberies under investigation',
+    'Driver arrested for DWI',
+    'Burglary reported on Main Street',
+  ]) {
+    assert.equal(keepArticleTitle(title, 'local'), false, title);
+  }
+  assert.equal(keepArticleTitle('Delhi launches a new summer concert series', 'local'), true);
+  assert.equal(keepArticleTitle('Arresting new art exhibit opens downtown', 'local'), true);
+  assert.equal(keepArticleTitle('Campus public-notice policy updated', 'campus'), true);
+});
+
+test('local exclusions are dropped before articles are stored', async () => {
+  const db = freshDb();
+  const rss = `<?xml version="1.0"?><rss version="2.0"><channel><title>Local</title>
+<item><title>Public Notices | July 30</title><link>https://ex.com/notices</link></item>
+<item><title>Driver arrested for DWI</title><link>https://ex.com/dwi</link></item>
+<item><title>Delhi launches a summer concert series</title><link>https://ex.com/concert</link></item>
+</channel></rss>`;
+  const config = testConfig([{ name: 'Local', lane: 'local', url: 'https://local.example.com/rss' }]);
+  const restore = stubFetch((url) => url.includes('example.com'), () => new Response(rss));
+  try {
+    assert.equal((await pollOnce(db, config)).added, 1);
+    assert.deepEqual(
+      db.prepare('SELECT title FROM articles').all().map((row) => row.title),
+      ['Delhi launches a summer concert series']
+    );
+  } finally {
+    restore();
+    db.close();
+  }
+});
+
 test('feed ranks recent enrollment first and excludes stale publication dates', async () => {
   const { server, base, app } = bootApp();
   try {
@@ -175,6 +214,8 @@ test('after the seven-day enrollment gate, source lane and date determine rank',
     insert.run('National', 'Enrollment outlook', 'https://ex.com/old-enrollment', eightDaysAgo, 20, 'national');
     insert.run('National', 'Fresh national item', 'https://ex.com/national', now, 0, 'national');
     insert.run('Local', 'Fresh local item', 'https://ex.com/local', now, 0, 'local');
+    insert.run('Local', 'Public Notices | July 30', 'https://ex.com/notices', now, 0, 'local');
+    insert.run('Local', 'Police investigate a shooting', 'https://ex.com/shooting', now, 0, 'local');
     const { articles } = await (await s.get('/api/articles')).json();
     assert.deepEqual(articles.slice(0, 3).map((article) => article.title), [
       'Fresh local item',

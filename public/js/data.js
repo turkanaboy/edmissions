@@ -3,12 +3,12 @@ import { openWorkbench } from './workbench.js';
 
 const root = document.getElementById('data-root');
 const state = {
-  slate: { snapshot: null, cards: [] },
+  slate: null,
+  slateUrl: '',
   suny: { snapshot: null, cards: [] },
   sources: [],
   busy: '',
   error: '',
-  asOf: new Date().toISOString().slice(0, 10),
 };
 
 const field = (label, control, hint) =>
@@ -47,41 +47,50 @@ async function load() {
   render();
 }
 
-async function importSlate(event) {
+async function fetchSlate(event) {
   event.preventDefault();
-  const form = event.currentTarget;
-  const file = form.elements.csv.files[0];
-  if (!file) {
-    state.error = 'Choose an aggregate CSV file.';
-    render();
-    return;
-  }
-  if (file.size > 200_000) {
-    state.error = 'CSV must be 200 KB or smaller.';
-    render();
-    return;
-  }
   state.busy = 'slate';
   state.error = '';
   render();
   try {
-    await api('/api/data/slate', {
+    state.slate = await api('/api/data/slate/fetch', {
       method: 'POST',
-      body: JSON.stringify({
-        csv: await file.text(),
-        label: form.elements.label.value,
-        as_of: form.elements.as_of.value,
-        source_label: form.elements.source_label.value,
-      }),
+      body: JSON.stringify({ url: state.slateUrl }),
     });
     state.busy = '';
-    await load();
-    announce('Aggregate Slate snapshot imported.');
+    render();
+    announce(`Fetched ${state.slate.row_count} aggregate Slate rows.`);
   } catch (error) {
     state.busy = '';
     state.error = error.message;
     render();
   }
+}
+
+function slateTable() {
+  if (!state.slate) {
+    return el('p', { class: 'muted', role: 'status', text: 'Enter a Slate web service URL to load its table.' });
+  }
+  const retrieved = new Date(state.slate.retrieved_at).toLocaleString();
+  return el('div', { class: 'slate-results' },
+    el('p', {
+      class: 'meta',
+      role: 'status',
+      text: `${state.slate.row_count} rows · fetched ${retrieved} · not stored`,
+    }),
+    state.slate.columns.length
+      ? el('div', { class: 'data-table-wrap', tabindex: '0', 'aria-label': 'Slate results table' },
+        el('table', { class: 'data-table' },
+          el('thead', {},
+            el('tr', {}, ...state.slate.columns.map((column) => el('th', { scope: 'col', text: column })))
+          ),
+          el('tbody', {}, ...state.slate.rows.map((row) =>
+            el('tr', {}, ...row.map((value) => el('td', { text: value })))
+          ))
+        )
+      )
+      : el('p', { class: 'muted', text: 'Slate returned no rows.' })
+  );
 }
 
 async function refreshSuny() {
@@ -102,55 +111,39 @@ async function refreshSuny() {
 }
 
 function slateSection() {
-  return el('section', { class: 'data-section', 'aria-labelledby': 'slate-data-heading' },
+  return el('section', {
+    class: 'data-section',
+    'aria-labelledby': 'slate-data-heading',
+    'aria-busy': String(state.busy === 'slate'),
+  },
     el('div', { class: 'data-heading' },
       el('div', {},
-        el('h3', { id: 'slate-data-heading', text: 'Slate aggregate snapshot' }),
-        el('p', { class: 'muted', text: 'Counts only. Never upload names, IDs, emails, birth dates, or addresses.' })
-      ),
-      state.slate.snapshot
-        ? el('span', { class: 'pill', text: `As of ${state.slate.snapshot.as_of}` })
-        : null
-    ),
-    el('details', { class: 'data-import' },
-      el('summary', { text: 'Import aggregate CSV' }),
-      el('form', { class: 'stack', onsubmit: importSlate },
-        field('Snapshot label', el('input', {
-          name: 'label',
-          required: '',
-          value: 'Slate aggregate snapshot',
-        })),
-        el('div', { class: 'form-grid' },
-          field('As-of date', el('input', {
-            name: 'as_of',
-            type: 'date',
-            required: '',
-            value: state.asOf,
-            oninput: (event) => (state.asOf = event.target.value),
-          })),
-          field('Source label', el('input', {
-            name: 'source_label',
-            required: '',
-            value: 'Slate aggregate export',
-          }))
-        ),
-        field('Aggregate CSV file', el('input', {
-          name: 'csv',
-          type: 'file',
-          accept: '.csv,text/csv',
-          required: '',
-        }), 'Required columns are documented in the README. Maximum 200 KB.'),
-        el('button', {
-          class: 'btn btn-neon',
-          type: 'submit',
-          disabled: state.busy ? '' : undefined,
-          text: state.busy === 'slate' ? 'Importing…' : 'Import snapshot',
-        })
+        el('h3', { id: 'slate-data-heading', text: 'Live Slate table' }),
+        el('p', { class: 'muted', text: 'Fetch an aggregate query directly. The URL and results are not stored.' })
       )
     ),
-    state.slate.cards.length
-      ? el('div', { class: 'data-card-grid' }, ...state.slate.cards.map(metricCard))
-      : el('p', { class: 'muted', role: 'status', text: 'No Slate aggregate snapshot imported yet.' })
+    el('form', { class: 'slate-connect', onsubmit: fetchSlate },
+      field('Slate web service URL', el('input', {
+        name: 'url',
+        type: 'url',
+        required: '',
+        autocomplete: 'off',
+        spellcheck: 'false',
+        placeholder: 'https://apply.delhi.edu/…',
+        value: state.slateUrl,
+        disabled: state.busy ? '' : undefined,
+        oninput: (event) => (state.slateUrl = event.target.value),
+      }), 'Use a JSON or CSV aggregate query from delhi.edu or technolutions.net.'),
+      el('button', {
+        class: 'btn btn-neon',
+        type: 'submit',
+        disabled: state.busy ? '' : undefined,
+        text: state.busy === 'slate' ? 'Fetching from Slate…' : 'Fetch from Slate',
+      })
+    ),
+    state.busy === 'slate'
+      ? el('p', { class: 'operation-status', role: 'status', text: 'Fetching from Slate…' })
+      : slateTable()
   );
 }
 

@@ -31,14 +31,28 @@ test('filters and modes expose native pressed controls with focus keys', () => {
   assert.doesNotMatch(feed, /el\('span',[\s\S]{0,180}onclick:/);
 });
 
-test('research and campaigns share an accessible dominant workspace', () => {
+test('all primary tools share one accessible branded workspace', () => {
   assert.match(index, /class="player-bar" id="panel-player"/);
   assert.match(index, /class="workspace-tabs" role="tablist"/);
-  assert.equal((index.match(/role="tab"/g) || []).length, 2);
-  assert.equal((index.match(/role="tabpanel"/g) || []).length, 2);
+  assert.equal((index.match(/role="tab"/g) || []).length, 5);
+  assert.equal((index.match(/role="tabpanel"/g) || []).length, 5);
+  assert.equal((index.match(/class="workspace-wordmark"/g) || []).length, 5);
+  for (const [tab, panel] of [
+    ['research', 'notes'],
+    ['campaigns', 'campaigns'],
+    ['moments', 'moments'],
+    ['data', 'data'],
+    ['brief', 'brief'],
+  ]) {
+    assert.match(index, new RegExp(`id="tab-${tab}"[\\s\\S]*?aria-controls="panel-${panel}"`));
+    assert.match(index, new RegExp(`id="panel-${panel}"[\\s\\S]*?aria-labelledby="tab-${tab}"`));
+  }
+  assert.doesNotMatch(index, /class="secondary-tools"/);
   assert.match(app, /tab\.setAttribute\('aria-selected', String\(active\)\)/);
   assert.match(app, /ArrowLeft:/);
   assert.match(app, /ArrowRight:/);
+  assert.match(css, /\.workspace-wordmark::after/);
+  assert.match(css, /\.workspace-tabs\s*\{[^}]*overflow-x:\s*auto/s);
   assert.match(css, /\.grid\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*minmax\(280px,\s*0\.31fr\)/);
 });
 
@@ -131,23 +145,26 @@ test('AVP Brief is manual, removable, copyable, and printable without external s
   assert.doesNotMatch(poller, /brief/i);
 });
 
-test('Data Command Center labels aggregate imports and routes metrics through Use This', () => {
+test('Data Command Center fetches transient Slate tables and routes public metrics through Use This', () => {
   assert.match(index, /id="data-root"/);
-  for (const label of ['Snapshot label', 'As-of date', 'Source label', 'Aggregate CSV file']) {
-    assert.match(data, new RegExp(`field\\('${label}'`));
-  }
-  assert.match(data, /type: 'file'/);
-  assert.match(data, /Never upload names, IDs, emails, birth dates, or addresses/);
+  assert.match(data, /field\('Slate web service URL'/);
+  assert.match(data, /type: 'url'/);
+  assert.match(data, /Fetch from Slate/);
+  assert.match(data, /Fetching from Slate/);
+  assert.match(data, /el\('table'/);
+  assert.match(data, /scope: 'col'/);
+  assert.match(data, /not stored/i);
+  assert.doesNotMatch(data, /type: 'file'|Import snapshot/);
   assert.match(data, /openWorkbench\(card\.source_context/);
   assert.match(data, /Refresh official data/);
 });
 
 test('print CSS isolates the AVP Brief from dashboard controls', () => {
   assert.match(css, /@media print/);
-  for (const selector of ['.topbar', '.player-bar', '.grid', '#panel-moments', '#panel-data', '.workbench-dialog', '.brief-controls']) {
+  for (const selector of ['.topbar', '.player-bar', '.side-rail', '.workspace-tabs', '.workspace-pane:not(#panel-brief)', '.workbench-dialog', '.brief-controls']) {
     assert.match(css, new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
-  assert.match(css, /#panel-brief/);
+  assert.match(css, /#panel-brief\[hidden\]\s*\{[^}]*display:\s*block\s*!important/s);
 });
 
 test('mobile targets, theme colors, and reduced motion remain centralized', () => {

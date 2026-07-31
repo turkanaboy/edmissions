@@ -38,14 +38,26 @@
 
   <main class="grid">
     <section class="work-hub" aria-label="Main workspace">
-      <div class="workspace-tabs" role="tablist" aria-label="Main workspace">
+      <div class="workspace-tabs" role="tablist" aria-label="Main workspace" aria-orientation="horizontal">
         <button class="workspace-tab active" id="tab-research" role="tab" aria-selected="true" aria-controls="panel-notes">
-          <span>Research Hub</span>
+          <span class="workspace-wordmark"><span class="workspace-wordmark-hot">Research</span> Hub</span>
           <small>Ask, capture, connect</small>
         </button>
         <button class="workspace-tab" id="tab-campaigns" role="tab" aria-selected="false" aria-controls="panel-campaigns" tabindex="-1">
-          <span>Campaign Studio</span>
-          <small>From brief to send-ready</small>
+          <span class="workspace-wordmark"><span class="workspace-wordmark-hot">Campaign</span> Studio</span>
+          <small>Brief to send-ready</small>
+        </button>
+        <button class="workspace-tab" id="tab-moments" role="tab" aria-selected="false" aria-controls="panel-moments" tabindex="-1">
+          <span class="workspace-wordmark"><span class="workspace-wordmark-hot">Enrollment</span> Moments</span>
+          <small>Dates into action</small>
+        </button>
+        <button class="workspace-tab" id="tab-data" role="tab" aria-selected="false" aria-controls="panel-data" tabindex="-1">
+          <span class="workspace-wordmark"><span class="workspace-wordmark-hot">Data</span> Command Center</span>
+          <small>Aggregate, cited</small>
+        </button>
+        <button class="workspace-tab" id="tab-brief" role="tab" aria-selected="false" aria-controls="panel-brief" tabindex="-1">
+          <span class="workspace-wordmark"><span class="workspace-wordmark-hot">AVP</span> Brief</span>
+          <small>Build on demand</small>
         </button>
       </div>
       <section class="workspace-pane" id="panel-notes" role="tabpanel" aria-labelledby="tab-research" tabindex="0">
@@ -53,6 +65,15 @@
       </section>
       <section class="workspace-pane" id="panel-campaigns" role="tabpanel" aria-labelledby="tab-campaigns" tabindex="0" hidden>
         <div id="campaigns-root"></div>
+      </section>
+      <section class="workspace-pane" id="panel-moments" role="tabpanel" aria-labelledby="tab-moments" tabindex="0" hidden>
+        <div id="moments-root"></div>
+      </section>
+      <section class="workspace-pane" id="panel-data" role="tabpanel" aria-labelledby="tab-data" tabindex="0" hidden>
+        <div id="data-root"></div>
+      </section>
+      <section class="workspace-pane" id="panel-brief" role="tabpanel" aria-labelledby="tab-brief" tabindex="0" hidden>
+        <div id="brief-root"></div>
       </section>
     </section>
     <aside class="side-rail" aria-label="Dashboard side panels">
@@ -66,21 +87,6 @@
       </section>
     </aside>
   </main>
-
-  <section class="secondary-tools" aria-label="Planning tools">
-    <section class="panel secondary-panel" id="panel-moments" aria-label="Enrollment Moments">
-      <header class="panel-title"><h2>Enrollment Moments</h2><span>Verified dates into action</span></header>
-      <div id="moments-root"></div>
-    </section>
-    <section class="panel secondary-panel" id="panel-brief" aria-label="AVP Brief">
-      <header class="panel-title"><h2>AVP Brief</h2><span>Build on demand</span></header>
-      <div id="brief-root"></div>
-    </section>
-    <section class="panel secondary-panel" id="panel-data" aria-label="Data Command Center">
-      <header class="panel-title"><h2>Data Command Center</h2><span>Aggregate signals, cited</span></header>
-      <div id="data-root"></div>
-    </section>
-  </section>
 
   <dialog id="use-this-dialog" class="workbench-dialog">
     <div id="workbench-root"></div>
