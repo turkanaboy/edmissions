@@ -2,28 +2,51 @@ import { api, el, mount, restoreFocus } from './app.js';
 
 const root = document.getElementById('tasks-root');
 let tasks = [];
+let error = null;
 
 async function load(focusKey) {
-  const data = await api('/api/tasks').catch(() => ({ tasks: [] }));
-  tasks = data.tasks;
+  try {
+    const data = await api('/api/tasks');
+    tasks = data.tasks;
+    error = null;
+  } catch (err) {
+    error = `Could not load tasks: ${err.message}`;
+  }
   render(focusKey);
 }
 
 async function add(text) {
-  await api('/api/tasks', { method: 'POST', body: JSON.stringify({ text }) }).catch(() => {});
-  load('task-entry');
+  try {
+    await api('/api/tasks', { method: 'POST', body: JSON.stringify({ text }) });
+    await load('task-entry');
+    return true;
+  } catch (err) {
+    error = `Could not add task: ${err.message}`;
+    render('task-entry');
+    return false;
+  }
 }
 
 async function toggle(t) {
-  await api(`/api/tasks/${t.id}`, { method: 'PUT', body: JSON.stringify({ done: !t.done }) }).catch(() => {});
-  load(`task-${t.id}`);
+  try {
+    await api(`/api/tasks/${t.id}`, { method: 'PUT', body: JSON.stringify({ done: !t.done }) });
+    await load(`task-${t.id}`);
+  } catch (err) {
+    error = `Could not update task: ${err.message}`;
+    render(`task-${t.id}`);
+  }
 }
 
 async function remove(t) {
   const index = tasks.indexOf(t);
   const neighbor = tasks[index + 1] || tasks[index - 1];
-  await api(`/api/tasks/${t.id}`, { method: 'DELETE' }).catch(() => {});
-  load(neighbor ? `task-${neighbor.id}` : 'task-entry');
+  try {
+    await api(`/api/tasks/${t.id}`, { method: 'DELETE' });
+    await load(neighbor ? `task-${neighbor.id}` : 'task-entry');
+  } catch (err) {
+    error = `Could not delete task: ${err.message}`;
+    render(`task-${t.id}`);
+  }
 }
 
 function render(focusKey) {
@@ -33,18 +56,16 @@ function render(focusKey) {
       'form',
       {
         class: 'row',
-        onsubmit: (e) => {
+        onsubmit: async (e) => {
           e.preventDefault();
           const text = e.target.t.value.trim();
-          if (text) {
-            add(text);
-            e.target.t.value = '';
-          }
+          if (text && await add(text)) e.target.t.value = '';
         },
       },
       el('input', { name: 't', 'aria-label': 'New task', 'data-focus': 'task-entry', placeholder: 'add a task…' }),
       el('button', { class: 'btn', text: '+', 'aria-label': 'Add task' })
     ),
+    error ? el('p', { class: 'error', role: 'alert', text: error }) : null,
     !tasks.length ? el('p', { class: 'muted', role: 'status', text: 'No tasks yet.' }) : null,
     ...tasks.map((t) =>
       el(

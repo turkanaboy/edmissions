@@ -6,8 +6,12 @@ const root = document.getElementById('workbench-root');
 const state = { source: null, selections: [], invoker: null, busy: null, error: null };
 
 async function loadSelections() {
-  const data = await api('/api/brief-selections').catch(() => ({ selections: [] }));
-  state.selections = data.selections;
+  try {
+    const data = await api('/api/brief-selections');
+    state.selections = data.selections;
+  } catch (err) {
+    state.error = `Could not load the AVP Brief queue: ${err.message}`;
+  }
 }
 
 const close = () => dialog.close();
@@ -17,10 +21,10 @@ async function save(destination, path, payload) {
   state.error = null;
   render();
   try {
-    await api(path, { method: 'POST', body: JSON.stringify(payload) });
+    const saved = await api(path, { method: 'POST', body: JSON.stringify(payload) });
     state.busy = null;
     if (destination === 'brief') {
-      await loadSelections();
+      state.selections.push(saved);
       render();
       announce('Added to the AVP Brief queue.');
       return;
@@ -49,8 +53,9 @@ async function removeSelection(selection) {
   render();
   try {
     await api(`/api/brief-selections/${selection.id}`, { method: 'DELETE' });
-    await loadSelections();
+    state.selections = state.selections.filter((item) => item.id !== selection.id);
     state.busy = null;
+    state.error = null;
     render();
     announce('Removed from the AVP Brief queue.');
   } catch (err) {

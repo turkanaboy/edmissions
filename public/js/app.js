@@ -75,9 +75,16 @@ import { init as initMoments } from './moments.js';
 import { init as initBrief } from './brief.js';
 import { init as initData } from './data.js';
 
-document.getElementById('logout')?.addEventListener('click', async () => {
-  await api('/api/logout', { method: 'POST' }).catch(() => {});
-  location.href = '/login.html';
+const logoutButton = document.getElementById('logout');
+logoutButton?.addEventListener('click', async () => {
+  logoutButton.disabled = true;
+  try {
+    await api('/api/logout', { method: 'POST' });
+    location.href = '/login.html';
+  } catch (error) {
+    announce(`Logout failed: ${error.message}`);
+    logoutButton.disabled = false;
+  }
 });
 
 Object.assign(capabilities, await api('/api/capabilities').catch(() => ({})));

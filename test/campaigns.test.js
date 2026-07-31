@@ -18,7 +18,9 @@ const COMPLETE_FORM = {
   source_context: {
     title: 'Financial aid dates',
     publisher: 'SUNY Delhi',
+    published_at: '2026-07-30',
     url: 'https://www.delhi.edu/admission/financial-aid/deadlines/',
+    excerpt: 'UNIQUE_SOURCE_FACT_9b17: priority FAFSA review begins August 1.',
     lane: 'campus',
   },
 };
@@ -143,6 +145,9 @@ test('campaign context persists and preflight stays advisory', async () => {
     assert.equal(complete.channel, COMPLETE_FORM.channel);
     assert.equal(complete.deadline, COMPLETE_FORM.deadline);
     assert.deepEqual(complete.source_context, COMPLETE_FORM.source_context);
+    for (const value of Object.values(COMPLETE_FORM.source_context)) {
+      assert.ok(complete.output.includes(value), `campaign output should retain source value: ${value}`);
+    }
 
     const completeCheck = await (await s.get(`/api/campaigns/${complete.id}/preflight`)).json();
     const completeCodes = completeCheck.findings.map((finding) => finding.code);

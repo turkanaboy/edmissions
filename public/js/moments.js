@@ -42,10 +42,15 @@ async function save() {
 }
 
 async function remove(moment) {
-  await api(`/api/moments/${moment.id}`, { method: 'DELETE' }).catch(() => null);
-  state.editing = null;
-  await load('moment-new');
-  announce('Enrollment moment deleted.');
+  try {
+    await api(`/api/moments/${moment.id}`, { method: 'DELETE' });
+    state.editing = null;
+    await load('moment-new');
+    announce('Enrollment moment deleted.');
+  } catch (err) {
+    state.error = `Could not delete enrollment moment: ${err.message}`;
+    render('moment-save');
+  }
 }
 
 function editorView() {

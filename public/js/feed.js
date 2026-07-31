@@ -32,7 +32,7 @@ async function load({ focusKey, announceResult = false } = {}) {
     if (!state.articles.length && !state.starredOnly && !state.polledOnEmpty) {
       state.polledOnEmpty = true;
       render(focusKey);
-      await api('/api/articles/poll', { method: 'POST' }).catch(() => {});
+      await api('/api/articles/poll', { method: 'POST' });
       return load({ focusKey, announceResult });
     }
   } catch (err) {
@@ -47,6 +47,7 @@ async function load({ focusKey, announceResult = false } = {}) {
 async function toggleStar(article) {
   const updated = await api(`/api/articles/${article.id}/star`, { method: 'POST' }).catch(() => null);
   if (updated) {
+    state.error = null;
     article.starred = updated.starred;
     if (state.starredOnly && !article.starred) state.articles = state.articles.filter((a) => a.id !== article.id);
     render(state.articles.includes(article) ? `star-${article.id}` : 'feed-starred');

@@ -32,15 +32,20 @@ const field = (label, control, hint) =>
   el('label', { class: 'field' }, el('span', { text: label }), control, hint ? el('small', { text: hint }) : null);
 
 async function load() {
-  const [templates, campaigns, campus] = await Promise.all([
-    api('/api/campaigns/templates').catch(() => ({ templates: [] })),
-    api('/api/campaigns').catch(() => ({ campaigns: [] })),
-    api('/api/campaigns/campus').catch(() => ({ campus: null })),
-  ]);
-  state.templates = templates.templates;
-  state.campaigns = campaigns.campaigns;
-  state.campus = campus.campus;
-  if (!state.form.template_id && state.templates[0]) state.form.template_id = state.templates[0].id;
+  try {
+    const [templates, campaigns, campus] = await Promise.all([
+      api('/api/campaigns/templates'),
+      api('/api/campaigns'),
+      api('/api/campaigns/campus'),
+    ]);
+    state.templates = templates.templates;
+    state.campaigns = campaigns.campaigns;
+    state.campus = campus.campus;
+    state.error = null;
+    if (!state.form.template_id && state.templates[0]) state.form.template_id = state.templates[0].id;
+  } catch (err) {
+    state.error = `Could not load Campaign Studio: ${err.message}`;
+  }
   render();
 }
 
@@ -102,9 +107,12 @@ document.addEventListener('edm:prefill-campaign', (event) => {
 
 async function loadPreflight(id) {
   try {
-    state.preflight = await api(`/api/campaigns/${id}/preflight`);
+    const preflight = await api(`/api/campaigns/${id}/preflight`);
+    if (state.viewing?.id !== id) return;
+    state.preflight = preflight;
     state.preflightError = null;
   } catch (err) {
+    if (state.viewing?.id !== id) return;
     state.preflightError = err.message;
   }
   render();
@@ -200,10 +208,16 @@ function viewingView() {
         class: 'btn btn-ghost',
         text: 'Delete',
         onclick: async () => {
-          await api(`/api/campaigns/${c.id}`, { method: 'DELETE' }).catch(() => {});
-          state.viewing = null;
-          state.preflight = null;
-          load();
+          try {
+            await api(`/api/campaigns/${c.id}`, { method: 'DELETE' });
+            state.viewing = null;
+            state.preflight = null;
+            await load();
+            announce('Campaign deleted.');
+          } catch (err) {
+            state.error = `Could not delete campaign: ${err.message}`;
+            render();
+          }
         },
       })
     )
@@ -371,8 +385,18 @@ function formView() {
     ),
     el('div', { class: 'form-grid' },
       field('Source title', el('input', { placeholder: 'Official page or article', value: source.title || '', oninput: (e) => (source.title = e.target.value) })),
+      field('Source publisher', el('input', { placeholder: 'SUNY Delhi', value: source.publisher || '', oninput: (e) => (source.publisher = e.target.value) }))
+    ),
+    el('div', { class: 'form-grid' },
+      field('Source date', el('input', { placeholder: '2026-07-30', value: source.published_at || '', oninput: (e) => (source.published_at = e.target.value) })),
       field('Source URL', el('input', { type: 'url', placeholder: 'https://…', value: source.url || '', oninput: (e) => (source.url = e.target.value) }))
     ),
+    field('Source excerpt', el('textarea', {
+      rows: '4',
+      placeholder: 'Key facts or passage to preserve in the campaign handoff',
+      text: source.excerpt || '',
+      oninput: (e) => (source.excerpt = e.target.value),
+    })),
     el('div', { class: 'form-grid form-grid-compact' },
       field('Messages', el('input', { type: 'number', min: '1', max: '20', value: String(f.message_count), oninput: (e) => (f.message_count = Number(e.target.value)) })),
       field('Writing template', el('select', { onchange: (e) => { f.template_id = Number(e.target.value); render(); } },

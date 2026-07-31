@@ -16,8 +16,13 @@ const subjects = () => capabilities.subjects || [];
 
 async function load(focusKey) {
   const qs = state.filterTag ? `?tag=${encodeURIComponent(state.filterTag)}` : '';
-  const data = await api('/api/notes' + qs).catch(() => ({ notes: [] }));
-  state.notes = data.notes;
+  try {
+    const data = await api('/api/notes' + qs);
+    state.notes = data.notes;
+    state.error = null;
+  } catch (err) {
+    state.error = `Could not load notes: ${err.message}`;
+  }
   render(focusKey);
 }
 
@@ -42,10 +47,15 @@ async function saveEditing() {
 }
 
 async function removeNote(id) {
-  await api(`/api/notes/${id}`, { method: 'DELETE' }).catch(() => {});
-  if (state.editing?.id === id) state.editing = null;
-  await load('new-note');
-  announce('Note deleted.');
+  try {
+    await api(`/api/notes/${id}`, { method: 'DELETE' });
+    if (state.editing?.id === id) state.editing = null;
+    await load('new-note');
+    announce('Note deleted.');
+  } catch (err) {
+    state.error = `Could not delete note: ${err.message}`;
+    render('note-save');
+  }
 }
 
 async function summarize(note) {
@@ -125,16 +135,21 @@ async function continueInChatGpt() {
 document.addEventListener('edm:add-to-note', async (e) => {
   const a = e.detail;
   const prefill = `${a.title}\n${a.link}\n\n> ${a.excerpt || '(no excerpt)'}\n\nMy notes:\n`;
-  const saved = await api('/api/notes', {
-    method: 'POST',
-    body: JSON.stringify({ body: prefill, tags: [], article_id: a.id }),
-  }).catch(() => null);
-  if (!saved) return;
-  // don't stomp an open unsaved draft — the note is saved regardless; only
-  // steal the editor when it's free
-  if (!state.editing) state.editing = { ...saved };
-  await load('new-note');
-  announce('Article added to notes.');
+  try {
+    const saved = await api('/api/notes', {
+      method: 'POST',
+      body: JSON.stringify({ body: prefill, tags: [], article_id: a.id }),
+    });
+    // don't stomp an open unsaved draft — the note is saved regardless; only
+    // steal the editor when it's free
+    if (!state.editing) state.editing = { ...saved };
+    await load('new-note');
+    announce('Article added to notes.');
+  } catch (err) {
+    state.error = `Could not add article to notes: ${err.message}`;
+    render('new-note');
+    announce(state.error);
+  }
 });
 
 document.addEventListener('edm:prefill-research', (event) => {

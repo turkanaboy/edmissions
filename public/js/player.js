@@ -18,6 +18,7 @@ const emit = (type) => listeners.forEach((fn) => fn(type, state));
 const current = () => state.queue[state.index] || null;
 
 async function play(i, focusKey) {
+  if (state.mode === 'off') return;
   if (!state.queue.length) return;
   state.index = ((i % state.queue.length) + state.queue.length) % state.queue.length;
   audio.src = current().audio;
@@ -51,7 +52,13 @@ export async function setMode(mode) {
   });
   emit('mode');
   if (mode === 'off') {
+    state.loading = false;
+    state.queue = [];
+    state.index = -1;
+    state.fallback = null;
     audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
     render();
     return;
   }

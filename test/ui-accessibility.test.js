@@ -71,6 +71,28 @@ test('symbol controls and affected form controls have explicit names', () => {
   assert.match(tasks, /'aria-label': `Delete \$\{t\.text\}`/);
 });
 
+test('Off clears player state and all playback paths honor it', () => {
+  assert.match(player, /async function play[\s\S]*if \(state\.mode === 'off'\) return;/);
+  assert.match(player, /if \(mode === 'off'\) \{[\s\S]*state\.loading = false;[\s\S]*state\.queue = \[\];[\s\S]*state\.index = -1;[\s\S]*audio\.removeAttribute\('src'\)/);
+});
+
+test('durable client actions preserve state and report failed requests', () => {
+  assert.doesNotMatch(tasks, /api\('\/api\/tasks'\)\.catch/);
+  assert.doesNotMatch(tasks, /method: '(?:POST|PUT|DELETE)'[\s\S]{0,100}\.catch\(\(\) => \{\}\)/);
+  assert.match(tasks, /onsubmit: async[\s\S]*if \(text && await add\(text\)\) e\.target\.t\.value = ''/);
+  assert.match(tasks, /role: 'alert'/);
+
+  assert.doesNotMatch(notes, /api\('\/api\/notes' \+ qs\)\.catch/);
+  assert.doesNotMatch(notes, /api\(`\/api\/notes\/\$\{id\}`,[\s\S]{0,100}\.catch/);
+  assert.doesNotMatch(moments, /api\(`\/api\/moments\/\$\{moment\.id\}`,[\s\S]{0,100}\.catch/);
+  assert.doesNotMatch(campaigns, /api\(`\/api\/campaigns\/\$\{c\.id\}`,[\s\S]{0,100}\.catch/);
+  assert.doesNotMatch(feed, /api\('\/api\/articles\/poll'[\s\S]{0,100}\.catch/);
+  assert.doesNotMatch(workbench, /api\('\/api\/brief-selections'\)\.catch/);
+  assert.match(workbench, /state\.selections\.push\(saved\)/);
+  assert.match(workbench, /state\.selections = state\.selections\.filter\(\(item\) => item\.id !== selection\.id\)/);
+  assert.match(notes, /edm:add-to-note[\s\S]*try \{[\s\S]*await api\('\/api\/notes'[\s\S]*catch \(err\) \{[\s\S]*state\.error/);
+});
+
 test('dashboard feedback uses one polite announcer and visible status semantics', () => {
   assert.equal((index.match(/id="app-status"/g) || []).length, 1);
   assert.match(index, /id="app-status"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
@@ -82,8 +104,13 @@ test('dashboard feedback uses one polite announcer and visible status semantics'
   for (const source of [notes, feed, campaigns]) assert.match(source, /announce\('/);
 });
 
+test('logout reports request failure without pretending the session ended', () => {
+  assert.doesNotMatch(app, /api\('\/api\/logout'[\s\S]{0,120}\.catch\(\(\) => \{\}\)/);
+  assert.match(app, /try \{[\s\S]*api\('\/api\/logout'[\s\S]*location\.href = '\/login\.html'[\s\S]*catch \(error\) \{[\s\S]*announce\(/);
+});
+
 test('campaign preflight is labeled, non-blocking, and keeps HTML inert', () => {
-  for (const label of ['Audience', 'Sender', 'Channel', 'Deadline', 'Source title', 'Source URL']) {
+  for (const label of ['Audience', 'Sender', 'Channel', 'Deadline', 'Source title', 'Source publisher', 'Source date', 'Source URL', 'Source excerpt']) {
     assert.match(campaigns, new RegExp(`field\\('${label}'`));
   }
   assert.match(campaigns, /aria-labelledby.*preflight-heading/);
@@ -92,6 +119,11 @@ test('campaign preflight is labeled, non-blocking, and keeps HTML inert', () => 
   assert.match(campaigns, /Copy output/);
   assert.match(campaigns, /class: 'output-area'/);
   assert.doesNotMatch(campaigns, /innerHTML|srcdoc/);
+});
+
+test('campaign preflight ignores responses for a campaign that is no longer open', () => {
+  assert.match(campaigns, /const preflight = await api\([\s\S]*if \(state\.viewing\?\.id !== id\) return;[\s\S]*state\.preflight = preflight/);
+  assert.match(campaigns, /catch \(err\) \{[\s\S]*if \(state\.viewing\?\.id !== id\) return;[\s\S]*state\.preflightError = err\.message/);
 });
 
 test('Use This workbench is a native dialog with five explicit destinations', () => {
