@@ -367,7 +367,7 @@ button.pill { appearance: none; background: transparent; cursor: pointer; }
 .feed-status p { margin: 0.2rem 0 0; }
 .use-this { min-width: max-content; }
 
-.secondary-tools { padding: 0 0.9rem 0.9rem; }
+.secondary-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; padding: 0 0.9rem 0.9rem; }
 .secondary-panel { max-height: none; overflow: visible; }
 .moment-toolbar { flex-wrap: wrap; }
 .moment-toolbar .pill { margin-left: auto; }
@@ -384,6 +384,16 @@ button.pill { appearance: none; background: transparent; cursor: pointer; }
 .moment-actions a, .moment-actions button { font-size: 0.7rem; }
 .moment-editor { display: grid; gap: 0.65rem; }
 .warning { color: var(--star); }
+.brief-controls { flex-wrap: wrap; margin-bottom: 0.7rem; }
+.brief-preview { display: grid; gap: 0.85rem; }
+.brief-preview header h3 { margin: 0.08rem 0; font-size: 1.05rem; }
+.brief-preview section { padding-top: 0.65rem; border-top: 1px solid var(--hairline); }
+.brief-preview h4 { margin: 0 0 0.35rem; color: var(--purple-bright); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.brief-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.7rem; padding: 0.45rem 0; border-bottom: 1px solid var(--hairline); font-size: 0.78rem; }
+.brief-row > div { min-width: 0; }
+.brief-row p { margin: 0.15rem 0 0; color: var(--dim); font-size: 0.72rem; }
+.brief-markdown summary { color: var(--dim); cursor: pointer; font-size: 0.72rem; }
+.brief-markdown textarea { margin-top: 0.45rem; }
 
 .login-body { position: relative; display: grid; min-height: 100vh; overflow: hidden; place-items: center; background: radial-gradient(70% 60% at 50% 0%, oklch(0.32 0.18 305), transparent 65%), var(--bg); isolation: isolate; }
 .login-body::before { content: ""; position: fixed; inset: 0; z-index: -1; background: linear-gradient(180deg, oklch(0.08 0.035 300 / 0.56), oklch(0.08 0.035 300 / 0.84)), radial-gradient(70% 80% at 50% 30%, oklch(0.48 0.24 305 / 0.22), transparent 70%); }
@@ -433,7 +443,7 @@ button.pill { appearance: none; background: transparent; cursor: pointer; }
   .workspace-tab { min-width: 0; flex: 1; padding-inline: 0.75rem; }
   .workspace-pane { padding: 0.8rem; }
   .side-rail { grid-template-columns: minmax(0, 1fr); }
-  .secondary-tools { padding: 0 0.7rem 0.7rem; }
+  .secondary-tools { grid-template-columns: 1fr; padding: 0 0.7rem 0.7rem; }
   .moment-list { grid-template-columns: 1fr; }
   .panel { min-width: 0; max-height: none; overflow: visible; }
   #panel-feed { max-height: 70vh; overflow: auto; }
@@ -447,6 +457,17 @@ button.pill { appearance: none; background: transparent; cursor: pointer; }
   input:not([type="checkbox"]), textarea, select { min-height: 44px; }
   input[type="range"] { min-height: 44px; }
   .task-check { width: 44px; height: 44px; }
+}
+
+@media print {
+  #viz, .topbar, .player-bar, .grid, #panel-moments, .workbench-dialog, .brief-controls, #app-status { display: none !important; }
+  body { color: #111; background: #fff; }
+  .secondary-tools { display: block; padding: 0; }
+  #panel-brief { max-height: none; padding: 0; overflow: visible; background: #fff; border: 0; box-shadow: none; }
+  #panel-brief > .panel-title, .brief-selection-remove, .brief-markdown { display: none !important; }
+  .brief-preview { color: #111; }
+  .brief-preview a { color: #111; text-decoration: underline; }
+  .brief-preview section, .brief-row { border-color: #ccc; break-inside: avoid; }
 }
 
 @media (prefers-reduced-motion: reduce) {

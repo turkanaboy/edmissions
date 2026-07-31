@@ -10,7 +10,7 @@ import { notesRoutes } from './routes/notes.js';
 import { campaignRoutes, seedTemplates } from './routes/campaigns.js';
 import { taskRoutes } from './routes/tasks.js';
 import { aiRoutes } from './routes/ai.js';
-import { briefRoutes } from './routes/briefs.js';
+import { briefAssemblyRoutes, briefRoutes } from './routes/briefs.js';
 import { momentRoutes, seedMoments } from './routes/moments.js';
 import { createAi } from './openai.js';
 import { startPolling } from './poller.js';
@@ -63,6 +63,7 @@ export function createApp(config = loadConfig()) {
   app.use('/api/campaigns', campaignRoutes());
   app.use('/api/tasks', taskRoutes());
   app.use('/api/brief-selections', briefRoutes());
+  app.use('/api/brief', briefAssemblyRoutes());
   app.use('/api/moments', momentRoutes());
   app.use('/api', aiRoutes());
 

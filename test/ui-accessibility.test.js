@@ -14,6 +14,8 @@ const tasks = read('public/js/tasks.js');
 const campaigns = read('public/js/campaigns.js');
 const workbench = read('public/js/workbench.js');
 const moments = read('public/js/moments.js');
+const brief = read('public/js/brief.js');
+const poller = read('server/poller.js');
 const visualizer = read('public/js/visualizer.js');
 const css = read('public/css/app.css');
 
@@ -116,6 +118,24 @@ test('moment handoffs only fill empty campaign audience and deadline fields', ()
   assert.match(campaigns, /if \(!state\.form\.audience && source\.audience\)/);
   assert.match(campaigns, /if \(!state\.form\.deadline && source\.moment_date\)/);
   assert.match(workbench, /source\.moment_date.*Prepare/s);
+});
+
+test('AVP Brief is manual, removable, copyable, and printable without external sending', () => {
+  assert.match(index, /id="brief-root"/);
+  assert.match(brief, /Build AVP Brief/);
+  assert.match(brief, /navigator\.clipboard\.writeText/);
+  assert.match(brief, /window\.print/);
+  assert.match(brief, /brief-selections\/\$\{selection\.id\}/);
+  assert.doesNotMatch(brief, /send|email|publish/i);
+  assert.doesNotMatch(poller, /brief/i);
+});
+
+test('print CSS isolates the AVP Brief from dashboard controls', () => {
+  assert.match(css, /@media print/);
+  for (const selector of ['.topbar', '.player-bar', '.grid', '#panel-moments', '.workbench-dialog', '.brief-controls']) {
+    assert.match(css, new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+  assert.match(css, /#panel-brief/);
 });
 
 test('mobile targets, theme colors, and reduced motion remain centralized', () => {
