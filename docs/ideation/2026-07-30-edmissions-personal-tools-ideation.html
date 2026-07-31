@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ideation: Useful Personal Tools for EDMissions</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d0913;
+      --surface: #171020;
+      --surface-2: #21152d;
+      --surface-3: #2a1938;
+      --text: #f5effd;
+      --muted: #bbaec9;
+      --line: #3d2b4f;
+      --purple: #b86cff;
+      --purple-soft: #2f1944;
+      --pink: #ff5fa2;
+      --pink-soft: #451b34;
+      --green: #79e6bd;
+      --green-soft: #17372f;
+      --amber: #ffd281;
+      --amber-soft: #3b2d16;
+      --shadow: 0 18px 45px rgba(0, 0, 0, .26);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    a { color: #d39dff; text-underline-offset: 3px; }
+    a:hover { color: #f2dfff; }
+    strong { color: inherit; }
+    code {
+      color: #f1dfff;
+      background: #251830;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: .1rem .35rem;
+    }
+
+    .page {
+      width: min(940px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 56px 0 72px;
+    }
+
+    .hero {
+      padding: clamp(28px, 5vw, 48px);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--purple);
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3 {
+      margin-top: 0;
+      line-height: 1.15;
+      letter-spacing: -.025em;
+    }
+
+    h1 {
+      max-width: 740px;
+      margin-bottom: 18px;
+      font-size: clamp(2.1rem, 6vw, 4rem);
+      font-weight: 850;
+    }
+
+    h1 span { color: var(--purple); }
+    h2 { font-size: clamp(1.45rem, 3vw, 2rem); }
+    h3 { font-size: 1.25rem; }
+    p { max-width: 72ch; }
+
+    .lede {
+      margin: 0;
+      color: #d8cde4;
+      font-size: 1.08rem;
+    }
+
+    .metadata {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 26px 0 0;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 5px 10px;
+      border: 1px solid #55396e;
+      border-radius: 999px;
+      background: var(--purple-soft);
+      color: #ecd9ff;
+      font-size: .78rem;
+      font-weight: 700;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .stat {
+      padding: 16px;
+      border-radius: 16px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.55rem;
+      line-height: 1;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: .8rem;
+    }
+
+    section {
+      margin-top: 48px;
+      scroll-margin-top: 28px;
+    }
+
+    .section-intro {
+      color: var(--muted);
+      margin-bottom: 22px;
+    }
+
+    .axes {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .axes li {
+      min-height: 88px;
+      padding: 14px;
+      border-radius: 14px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: #dfd4e9;
+      font-weight: 700;
+    }
+
+    .jump-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin: 0 0 20px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .jump-list a {
+      display: block;
+      padding: 11px 13px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .idea {
+      margin-top: 16px;
+      padding: clamp(20px, 4vw, 30px);
+      border-radius: 20px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      scroll-margin-top: 24px;
+    }
+
+    .idea:first-of-type {
+      background: #1c1029;
+      border-color: #6d438a;
+      box-shadow: 0 16px 40px rgba(90, 39, 127, .18);
+    }
+
+    .idea-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .idea-title {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .idea-title h3 { margin: 0; }
+
+    .idea-id {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 38px;
+      min-height: 30px;
+      padding: 4px 9px;
+      border: 1px solid #704797;
+      border-radius: 999px;
+      background: var(--purple-soft);
+      color: #eedcff;
+      font-size: .75rem;
+      font-weight: 850;
+    }
+
+    .rank {
+      color: var(--pink);
+      font-size: .76rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .idea dl {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin: 18px 0;
+    }
+
+    .idea dl div {
+      padding: 11px 12px;
+      border-radius: 12px;
+      background: var(--surface-2);
+    }
+
+    .idea dt {
+      color: var(--muted);
+      font-size: .66rem;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .idea dd {
+      margin: 2px 0 0;
+      font-weight: 750;
+    }
+
+    .fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 24px;
+    }
+
+    .field {
+      margin: 0;
+    }
+
+    .field-wide { grid-column: 1 / -1; }
+
+    .label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--purple);
+      font-size: .69rem;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .concept {
+      margin: 24px 0 0;
+      padding: 14px;
+      border-radius: 16px;
+      background: #110b18;
+      border: 1px solid var(--line);
+      overflow-x: auto;
+    }
+
+    .concept svg {
+      display: block;
+      width: 100%;
+      min-width: 620px;
+      height: auto;
+    }
+
+    .concept figcaption {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: .78rem;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+    }
+
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      color: #e8d7f5;
+      background: var(--surface-2);
+      font-size: .7rem;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    tbody tr:last-child td { border-bottom: 0; }
+    td:first-child { width: 48px; color: var(--muted); }
+
+    .sources {
+      display: grid;
+      gap: 10px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .sources li {
+      padding: 13px 15px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+    }
+
+    footer {
+      margin-top: 48px;
+      padding-top: 20px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      font-size: .78rem;
+    }
+
+    @media (max-width: 760px) {
+      .page { width: min(100% - 20px, 940px); padding-top: 20px; }
+      .hero { border-radius: 18px; }
+      .stats, .axes, .jump-list, .fields, .idea dl { grid-template-columns: 1fr; }
+      .idea-head { display: block; }
+      .rank { display: inline-block; margin-top: 8px; }
+      .field-wide { grid-column: auto; }
+    }
+
+    @media print {
+      :root { color-scheme: light; }
+      body { background: #fff; color: #1d1423; }
+      .hero, .idea, .axes li, .jump-list a, .sources li, table {
+        background: #fff;
+        color: #1d1423;
+        box-shadow: none;
+      }
+      .hero, .idea, .axes li, .jump-list a, .sources li, .table-wrap { border-color: #d9cde3; }
+      a { color: #642e8a; }
+      .lede, .section-intro, footer, .concept figcaption { color: #5d5363; }
+      .idea dl div { background: #f6f0fa; }
+      th { background: #f1e9f6; color: #2d1d36; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">EDMissions · Product Ideation</p>
+      <h1>Useful tools for a <span>personal enrollment command center</span></h1>
+      <p class="lede">Six grounded additions that make the existing news, research, campaign, and task tools work together—without drifting into CRM territory.</p>
+
+      <div class="metadata" aria-label="Document metadata">
+        <span class="chip">Date · <time datetime="2026-07-30">2026-07-30</time></span>
+        <span class="chip">Topic · edmissions-personal-tools</span>
+        <span class="chip">Focus · helpful additions for the current dashboard</span>
+        <span class="chip">Mode · repo-grounded</span>
+      </div>
+
+      <div class="stats" aria-label="Ideation counts">
+        <div class="stat"><strong>35</strong><span>raw candidates</span></div>
+        <div class="stat"><strong>6</strong><span>ranked survivors</span></div>
+        <div class="stat"><strong>5</strong><span>workflow axes covered</span></div>
+      </div>
+    </header>
+
+    <section id="grounding-context">
+      <p class="eyebrow">What the codebase says</p>
+      <h2>Grounding Context</h2>
+      <p>EDMissions already combines a recent-news feed, five-exchange research chat with saved notes, Campaign Studio with campus memory and text/HTML templates, tasks, and an ambient music player. Its product direction is deliberately personal: one enrollment leader, little ceremony, and a slightly rebellious visual voice.</p>
+      <p>The strongest gap is connective tissue. Useful information enters through the feed and Research Hub, but turning it into a campaign, task, or portable briefing still asks the user to move context by hand. The shortlist therefore favors small workflow bridges and deterministic quality checks over new integrations, prospect records, or predictive analytics.</p>
+      <p>Current recruitment platforms reinforce the value of events, appointments, actionable follow-up, audience-specific communication, and campaign measurement. Those patterns are useful here only after being reduced to a one-user scale.</p>
+    </section>
+
+    <section id="topic-axes">
+      <p class="eyebrow">The surface map</p>
+      <h2>Topic Axes</h2>
+      <ul class="axes">
+        <li>Intelligence → action</li>
+        <li>Campaign quality</li>
+        <li>Planning &amp; timing</li>
+        <li>Reusable context</li>
+        <li>Personal reporting</li>
+      </ul>
+    </section>
+
+    <section id="ranked-ideas">
+      <p class="eyebrow">The useful cut</p>
+      <h2>Ranked Ideas</h2>
+      <p class="section-intro">Ranked for value to the current product, grounding strength, implementation burden, and fit with a personal dashboard.</p>
+
+      <nav aria-label="Ranked idea links">
+        <ol class="jump-list">
+          <li><a href="#i1">I1. Signal → Workbench</a></li>
+          <li><a href="#i2">I2. Campaign Preflight</a></li>
+          <li><a href="#i3">I3. Enrollment Moment Calendar</a></li>
+          <li><a href="#i4">I4. Weekly AVP Brief</a></li>
+          <li><a href="#i5">I5. Audience Lanes</a></li>
+          <li><a href="#i6">I6. Event Follow-up Kit</a></li>
+        </ol>
+      </nav>
+
+      <article class="idea" id="i1">
+        <div class="idea-head">
+          <div class="idea-title">
+            <span class="idea-id">I1</span>
+            <h3>Signal → Workbench</h3>
+          </div>
+          <span class="rank">Top pick</span>
+        </div>
+        <p>Give every feed article and saved research response a compact “Use this” action. It can open Campaign Studio with the source, facts, and draft goal prefilled; create a linked task; or save a clean note. The original source stays attached through the handoff.</p>
+        <dl>
+          <div><dt>Axis</dt><dd>Intelligence → action</dd></div>
+          <div><dt>Confidence</dt><dd>92%</dd></div>
+          <div><dt>Complexity</dt><dd>Medium</dd></div>
+        </dl>
+        <div class="fields">
+          <p class="field field-wide"><span class="label">Basis · direct</span>The repository already stores feed items, research responses, notes, campaigns, and tasks, but these objects remain separate at the moment a useful signal should become work.</p>
+          <p class="field"><span class="label">Rationale</span>This closes the dashboard’s most important loop with data and screens that already exist. Each new article or research answer becomes more valuable because it can move directly into action.</p>
+          <p class="field"><span class="label">Downsides</span>Prefill rules must stay modest. Over-inference would create confusing campaign drafts, so the first version should copy context and suggest fields rather than silently invent them.</p>
+        </div>
+        <figure class="concept">
+          <svg viewBox="0 0 780 150" role="img" aria-labelledby="flow-title flow-desc">
+            <title id="flow-title">Signal to Workbench concept flow</title>
+            <desc id="flow-desc">A feed article or research answer moves through one Use This action into a campaign, task, or saved note while retaining its source.</desc>
+            <defs>
+              <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" fill="#b86cff"></path>
+              </marker>
+            </defs>
+            <rect x="10" y="35" width="165" height="78" rx="14" fill="#21152d" stroke="#6d438a"></rect>
+            <text x="92" y="67" text-anchor="middle" fill="#f5effd" font-size="15" font-weight="700">Feed article or</text>
+            <text x="92" y="89" text-anchor="middle" fill="#f5effd" font-size="15" font-weight="700">research answer</text>
+            <line x1="188" y1="74" x2="300" y2="74" stroke="#b86cff" stroke-width="3" marker-end="url(#arrowhead)"></line>
+            <text x="244" y="55" text-anchor="middle" fill="#d9c6e7" font-size="12">Use this</text>
+            <rect x="316" y="35" width="150" height="78" rx="39" fill="#2f1944" stroke="#b86cff"></rect>
+            <text x="391" y="68" text-anchor="middle" fill="#f5effd" font-size="15" font-weight="800">Workbench</text>
+            <text x="391" y="90" text-anchor="middle" fill="#d9c6e7" font-size="12">source retained</text>
+            <line x1="480" y1="74" x2="572" y2="74" stroke="#b86cff" stroke-width="3" marker-end="url(#arrowhead)"></line>
+            <rect x="588" y="17" width="178" height="34" rx="10" fill="#451b34" stroke="#87415f"></rect>
+            <rect x="588" y="58" width="178" height="34" rx="10" fill="#21152d" stroke="#6d438a"></rect>
+            <rect x="588" y="99" width="178" height="34" rx="10" fill="#17372f" stroke="#3f816d"></rect>
+            <text x="677" y="39" text-anchor="middle" fill="#ffe3ef" font-size="13" font-weight="700">Campaign draft</text>
+            <text x="677" y="80" text-anchor="middle" fill="#f5effd" font-size="13" font-weight="700">Task</text>
+            <text x="677" y="121" text-anchor="middle" fill="#d9fff1" font-size="13" font-weight="700">Saved note</text>
+          </svg>
+          <figcaption>Conceptual flow: the dashboard becomes a workbench when information can retain its source while moving into the next useful action.</figcaption>
+        </figure>
+      </article>
+
+      <article class="idea" id="i2">
+        <div class="idea-head">
+          <div class="idea-title">
+            <span class="idea-id">I2</span>
+            <h3>Campaign Preflight</h3>
+          </div>
+          <span class="rank">Fast win</span>
+        </div>
+        <p>Add a pre-copy/export panel that checks subject length, the presence of a clear CTA and link, date consistency, reading length, missing audience context, HTML links, and accidental repetition. Keep most checks deterministic; use AI only for optional tone or audience feedback.</p>
+        <dl>
+          <div><dt>Axis</dt><dd>Campaign quality</dd></div>
+          <div><dt>Confidence</dt><dd>89%</dd></div>
+          <div><dt>Complexity</dt><dd>Low</dd></div>
+        </dl>
+        <div class="fields">
+          <p class="field field-wide"><span class="label">Basis · direct</span>Campaign Studio can generate, save, copy, and export text or HTML, but it has no final check for common omissions before the content leaves the dashboard.</p>
+          <p class="field"><span class="label">Rationale</span>A short checklist prevents the most ordinary campaign mistakes without adding another workflow or external service. It also makes generated HTML safer to trust.</p>
+          <p class="field"><span class="label">Downsides</span>Heuristics can become bossy. Checks should be advisory, explain the issue, and never block copying or export.</p>
+        </div>
+      </article>
+
+      <article class="idea" id="i3">
+        <div class="idea-head">
+          <div class="idea-title">
+            <span class="idea-id">I3</span>
+            <h3>Enrollment Moment Calendar</h3>
+          </div>
+          <span class="rank">Planning layer</span>
+        </div>
+        <p>Add a lightweight calendar for enrollment deadlines, campus events, and campaign windows. Each moment can carry an audience, a 30/14/7-day nudge, and one-click actions to create a campaign or task. Start local—no Google or Outlook OAuth.</p>
+        <dl>
+          <div><dt>Axis</dt><dd>Planning &amp; timing</dd></div>
+          <div><dt>Confidence</dt><dd>78%</dd></div>
+          <div><dt>Complexity</dt><dd>Medium</dd></div>
+        </dl>
+        <div class="fields">
+          <p class="field field-wide"><span class="label">Basis · external</span>Current recruitment systems such as Salesforce Education Cloud and Slate treat events, appointments, follow-up, and actionable lists as core admissions work. 2026 enrollment-marketing guidance also calls out overlapping campaign cycles.</p>
+          <p class="field"><span class="label">Rationale</span>Dates give tasks and campaigns a shared spine. A small local calendar would help the dashboard answer “what needs attention now?” without becoming a full scheduling product.</p>
+          <p class="field"><span class="label">Downsides</span>A calendar is only useful when maintained. Keep fields minimal and add external calendar sync only if manual duplication becomes a proven annoyance.</p>
+        </div>
+      </article>
+
+      <article class="idea" id="i4">
+        <div class="idea-head">
+          <div class="idea-title">
+            <span class="idea-id">I4</span>
+            <h3>Weekly AVP Brief</h3>
+          </div>
+          <span class="rank">Portable context</span>
+        </div>
+        <p>Create a one-click Markdown or HTML briefing from starred news, saved research notes, campaigns in progress, recent decisions, and open tasks. The brief can be copied into a separate ChatGPT conversation or kept as a personal weekly record.</p>
+        <dl>
+          <div><dt>Axis</dt><dd>Personal reporting</dd></div>
+          <div><dt>Confidence</dt><dd>88%</dd></div>
+          <div><dt>Complexity</dt><dd>Low</dd></div>
+        </dl>
+        <div class="fields">
+          <p class="field field-wide"><span class="label">Basis · direct</span>All of the source material already exists locally, and the intended deeper-work handoff is a separate ChatGPT session rather than a large context window inside EDMissions.</p>
+          <p class="field"><span class="label">Rationale</span>The brief makes EDMissions’ accumulated work portable without API integrations. It also turns the dashboard into a reliable memory aid between sessions.</p>
+          <p class="field"><span class="label">Downsides</span>An automatic brief can become noisy. The export should begin with selected/starred material and provide a small preview before copying.</p>
+        </div>
+      </article>
+
+      <article class="idea" id="i5">
+        <div class="idea-head">
+          <div class="idea-title">
+            <span class="idea-id">I5</span>
+            <h3>Audience Lanes</h3>
+          </div>
+          <span class="rank">Reusable context</span>
+        </div>
+        <p>Save a small set of reusable audience profiles—adult learners, transfers, deposited students, families, or any locally useful group. Campaign Studio applies one lane alongside campus memory and can warn when a message mixes incompatible audiences.</p>
+        <dl>
+          <div><dt>Axis</dt><dd>Reusable context</dd></div>
+          <div><dt>Confidence</dt><dd>86%</dd></div>
+          <div><dt>Complexity</dt><dd>Low</dd></div>
+        </dl>
+        <div class="fields">
+          <p class="field field-wide"><span class="label">Basis · external</span>Current enrollment-marketing guidance recommends keeping overlapping deposited-student and next-class campaigns distinct. The product already has persistent campus memory, making audience memory the smallest useful next layer.</p>
+          <p class="field"><span class="label">Rationale</span>A few reusable profiles improve specificity across every campaign without storing prospect data or building segmentation infrastructure.</p>
+          <p class="field"><span class="label">Downsides</span>Profiles can become stereotypes. Keep them editable, short, and focused on goals, barriers, proof points, and preferred CTA—not demographic assumptions.</p>
+        </div>
+      </article>
+
+      <article class="idea" id="i6">
+        <div class="idea-head">
+          <div class="idea-title">
+            <span class="idea-id">I6</span>
+            <h3>Event Follow-up Kit</h3>
+          </div>
+          <span class="rank">Campaign mode</span>
+        </div>
+        <p>Add a compact Campaign Studio mode for one event. From the event name, date, audience, and CTA, generate a before-event invitation/reminder, a day-of note, an after-event follow-up, and the associated tasks.</p>
+        <dl>
+          <div><dt>Axis</dt><dd>Planning &amp; timing</dd></div>
+          <div><dt>Confidence</dt><dd>76%</dd></div>
+          <div><dt>Complexity</dt><dd>Low</dd></div>
+        </dl>
+        <div class="fields">
+          <p class="field field-wide"><span class="label">Basis · external</span>Recruitment platforms consistently pair event registration and visit activity with automated communication and follow-up. Campaign Studio already owns message generation and Tasks already owns the checklist.</p>
+          <p class="field"><span class="label">Rationale</span>This packages a repeated enrollment workflow without introducing a new top-level module. It becomes stronger later if linked to the Enrollment Moment Calendar.</p>
+          <p class="field"><span class="label">Downsides</span>It partially overlaps the calendar idea. Build it first only if event communication is frequent enough to justify a dedicated campaign mode.</p>
+        </div>
+      </article>
+    </section>
+
+    <section id="rejection-summary">
+      <p class="eyebrow">What stayed out</p>
+      <h2>Rejection Summary</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Idea</th><th>Reason rejected</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>Zero-blank Campaign Start</td><td>Duplicate of the broader Signal → Workbench flow.</td></tr>
+            <tr><td>2</td><td>Automatic Source Trail</td><td>Useful implementation detail inside Signal → Workbench, not a standalone tool.</td></tr>
+            <tr><td>3</td><td>Deadline Collision Flag</td><td>Valuable later, but it needs calendar and audience data first.</td></tr>
+            <tr><td>4</td><td>One-click “Do next”</td><td>Duplicate of Signal → Workbench.</td></tr>
+            <tr><td>5</td><td>Stale Fact Nudge</td><td>Belongs in a future campus-memory refinement.</td></tr>
+            <tr><td>6</td><td>Quiet Digest Mode</td><td>The feed’s existing date and relevance filtering already addresses most of this pain.</td></tr>
+            <tr><td>7</td><td>Workbench, not Modules</td><td>Too broad as a redesign; I1 captures the useful move.</td></tr>
+            <tr><td>8</td><td>Evidence-first Campaigns</td><td>Too rigid as a requirement; better as an optional preflight check.</td></tr>
+            <tr><td>9</td><td>Decision Log</td><td>Useful component of the Weekly AVP Brief, weak as its own surface.</td></tr>
+            <tr><td>10</td><td>Next-best-action Home</td><td>Needs reliable deadline and work-state data first.</td></tr>
+            <tr><td>11</td><td>Proof Library</td><td>Overlaps campus memory; revisit only if the current memory field becomes unwieldy.</td></tr>
+            <tr><td>12</td><td>Campaign Retro</td><td>No outcome data exists yet, so the likely value is speculative.</td></tr>
+            <tr><td>13</td><td>Reusable Message Blocks</td><td>Existing HTML and text templates cover the immediate need.</td></tr>
+            <tr><td>14</td><td>Saved Research Recipes</td><td>A convenience, but less valuable than the surviving cross-tool connections.</td></tr>
+            <tr><td>15</td><td>Campaign Variant Matrix</td><td>Encourages channel expansion before audience discipline is established.</td></tr>
+            <tr><td>16</td><td>Personal Source Watchlist</td><td>Current feed ranking and filtering should mature first.</td></tr>
+            <tr><td>17</td><td>Campus Fact Usage Map</td><td>Traceability cost exceeds likely value for one user.</td></tr>
+            <tr><td>18</td><td>Export Bundle</td><td>Overlaps the Weekly AVP Brief and existing campaign/chat handoffs.</td></tr>
+            <tr><td>19</td><td>DJ Set Queue for Work</td><td>On-brand, but less legible than ordinary priorities and dates.</td></tr>
+            <tr><td>20</td><td>Preflight Checklist like Aviation</td><td>Duplicate of Campaign Preflight.</td></tr>
+            <tr><td>21</td><td>Evidence Cards</td><td>Too much metadata for the current personal scope.</td></tr>
+            <tr><td>22</td><td>Campaign Rehearsal</td><td>Useful only after multi-step campaign sequences are modeled.</td></tr>
+            <tr><td>23</td><td>No CRM Mode</td><td>A product constraint, not a tool.</td></tr>
+            <tr><td>24</td><td>One-minute Weekly Review</td><td>Merged into Weekly AVP Brief.</td></tr>
+            <tr><td>25</td><td>Offline-first Export Handoff</td><td>An implementation strategy for Weekly AVP Brief, not a separate feature.</td></tr>
+            <tr><td>26</td><td>One Audience at a Time</td><td>An interaction refinement inside Audience Lanes.</td></tr>
+            <tr><td>27</td><td>Enrollment Moment Workbench</td><td>Too broad for a first increment; represented by I1 and I3.</td></tr>
+            <tr><td>28</td><td>Trustworthy Campaign Loop</td><td>Split into the more actionable Campaign Preflight now.</td></tr>
+            <tr><td>29</td><td>Portable AVP Brief</td><td>Duplicate of Weekly AVP Brief.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="sources">
+      <p class="eyebrow">Evidence base</p>
+      <h2>Sources &amp; References</h2>
+      <ul class="sources">
+        <li><a href="https://github.com/turkanaboy/edmissions/blob/main/README.md">EDMissions README</a> — current feature set and operating model.</li>
+        <li><a href="https://github.com/turkanaboy/edmissions/blob/main/PRODUCT.md">EDMissions Product Brief</a> — personal scope, principles, and boundaries.</li>
+        <li><a href="https://help.salesforce.com/s/articleView?id=sfdo.ec_recruitment_admissions_app.htm&amp;language=en_US&amp;type=5">Salesforce Recruitment &amp; Admissions App</a> — tasks, appointments, prospects, analytics, and actionable lists.</li>
+        <li><a href="https://www.salesforce.com/education/cloud/">Salesforce Education Cloud</a> — recruitment events, applications, engagement timelines, and follow-up.</li>
+        <li><a href="https://www.k-state.edu/crm/">Kansas State University CRM / Slate overview</a> — automated communication, event registration, interactions, and real-time reporting.</li>
+        <li><a href="https://www.ama.org/events/virtual-training/summer-enrollment-marketing-strategies-for-higher-education/">AMA: Summer Enrollment Marketing Strategies for Higher Education</a> — coordinating overlapping student audiences and campaign cycles.</li>
+        <li><a href="https://highered.collegeboard.org/recruitment-admissions/enrollment-solutions/events">College Board Enrollment Solutions Events</a> — current recruitment signals and enrollment planning themes.</li>
+      </ul>
+    </section>
+
+    <footer class="composition-signal">Composed 2026-07-30T20:53:50-04:00 by ce-ideate from the EDMissions repository and the user’s request for additional helpful tools.</footer>
+  </main>
+</body>
+</html>
