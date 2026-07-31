@@ -10,9 +10,6 @@ services:
     volumes:
       # SQLite database and the local music library survive redeploys
       - ./data:/app/data
-      # directory mount (not a single file) so host edits to content.json
-      # stay visible inside the container; restart to apply
-      - ./config:/app/config
     networks:
       # joins the existing chiefofstaff nginx network so that proxy can reach
       # this container by service name (edmissions:3000) — no host port needed

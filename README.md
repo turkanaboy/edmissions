@@ -71,9 +71,11 @@ cp .env.example .env    # fill in the required values
 docker compose up -d --build
 ```
 
-The compose file binds to `127.0.0.1:3000` and mounts `./data` (SQLite + music)
-and `./config` as volumes, so redeploys keep your notes, stars, tasks, and
-tweaks. `EDMISSIONS_TRUST_PROXY=1` is set for you.
+The compose service mounts `./data` (SQLite + music), so redeploys keep your
+notes, stars, tasks, and music. Configuration is copied into the image so its
+campus seed cannot be masked by a stale host mount; after editing
+`config/content.json`, rerun `docker compose up -d --build`.
+`EDMISSIONS_TRUST_PROXY=1` is set for you.
 
 Point a TLS subdomain at it. If your reverse proxy is a **container on its own
 Docker network** (e.g. an existing nginx/Caddy stack from another project),

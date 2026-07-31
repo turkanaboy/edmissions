@@ -1,11 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { loadConfig } from '../server/config.js';
 
 const baseEnv = {
   EDMISSIONS_USERS: 'tyler:pw1,friend:pw2',
   EDMISSIONS_SESSION_SECRET: 's3cret',
 };
+
+const readRepoFile = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+
+test('Docker uses the bundled content config instead of masking it with a host mount', () => {
+  assert.match(readRepoFile('Dockerfile'), /COPY config \.\/config/);
+  assert.doesNotMatch(readRepoFile('docker-compose.yml'), /\.\/config:\/app\/config/);
+});
 
 test('parses two user pairs from EDMISSIONS_USERS', () => {
   const c = loadConfig({ ...baseEnv });
