@@ -138,25 +138,83 @@ p { text-wrap: pretty; }
   white-space: nowrap;
 }
 
+.player-bar {
+  position: relative;
+  z-index: var(--z-content);
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  min-height: 100px;
+  padding: 0.75rem 1.2rem;
+  background: oklch(0.14 0.04 300 / 0.92);
+  border-bottom: 1px solid var(--hairline);
+}
+.player-heading h2 { margin: 0; font-size: 1rem; font-weight: 750; letter-spacing: -0.015em; }
+.player-heading span { color: var(--purple-bright); font-size: 0.73rem; }
+#player-root {
+  display: grid;
+  grid-template-columns: auto minmax(210px, 0.8fr) minmax(170px, 0.7fr) minmax(240px, 1.15fr);
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+.player-controls, .player-search { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
+.player-controls input[type="range"] { width: 82px; }
+.player-search input { min-width: 0; }
+.player-now, .player-up-next { min-width: 0; }
+.player-group-label { margin-bottom: 0.18rem; color: var(--dim); font-size: 0.7rem; }
+.player-track { display: flex; min-width: 0; flex-direction: column; }
+.player-track strong, .player-track span, .player-up-next a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-track strong { font-size: 0.82rem; }
+.player-track span { color: var(--dim); font-size: 0.72rem; }
+.player-up-next-list { display: flex; gap: 0.65rem; min-width: 0; }
+.player-up-next a { min-width: 0; flex: 1; color: var(--ink); font-size: 0.72rem; text-decoration: none; }
+
 .grid {
   position: relative;
   z-index: var(--z-content);
   display: grid;
   gap: 0.85rem;
   padding: 0.85rem 1.2rem 1.2rem;
-  grid-template-columns: minmax(250px, 0.92fr) minmax(350px, 1.28fr) minmax(280px, 1fr);
-  grid-template-areas: "player notes feed" "campaigns notes tasks";
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.31fr);
+  align-items: start;
 }
 
-#panel-player { grid-area: player; }
-#panel-notes { grid-area: notes; max-height: calc(100vh - 86px); }
-#panel-feed { grid-area: feed; }
-#panel-campaigns { grid-area: campaigns; }
-#panel-tasks { grid-area: tasks; }
+.work-hub {
+  min-width: 0;
+  min-height: calc(100vh - 198px);
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+}
+.workspace-tabs { display: flex; border-bottom: 1px solid var(--hairline); }
+.workspace-tab {
+  display: flex;
+  min-width: 180px;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.82rem 1rem 0.76rem;
+  color: var(--dim);
+  background: transparent;
+  border: 0;
+  box-shadow: inset 0 -2px transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+.workspace-tab span { font-size: 0.9rem; font-weight: 750; }
+.workspace-tab small { font-size: 0.7rem; }
+.workspace-tab.active { color: var(--ink); background: oklch(0.7 0.25 305 / 0.08); box-shadow: inset 0 -2px var(--purple-bright); }
+.workspace-tab.active small { color: var(--purple-bright); }
+.workspace-pane { min-width: 0; padding: 1rem; }
+.side-rail { display: grid; gap: 0.85rem; min-width: 0; }
 
 .panel {
   min-height: 220px;
-  max-height: calc((100vh - 100px) / 2);
+  max-height: calc((100vh - 214px) / 2);
   overflow: auto;
   padding: 0.95rem 1rem 1rem;
   background: var(--surface);
@@ -282,14 +340,22 @@ button.pill { appearance: none; background: transparent; cursor: pointer; }
   .btn:hover { border-color: var(--purple-bright); background-color: oklch(0.28 0.09 305); }
   .btn-ghost:hover { color: var(--ink); background-color: oklch(0.7 0.25 305 / 0.08); }
   .modes button:hover { color: var(--ink); background: oklch(0.7 0.25 305 / 0.08); }
-  .list-item a:hover, .text-button:hover, .history-row:hover { color: var(--cyan); }
+  .list-item a:hover, .player-up-next a:hover, .text-button:hover, .history-row:hover { color: var(--cyan); }
   .btn-icon:hover { color: var(--ink); background: oklch(0.7 0.25 305 / 0.1); }
+  .workspace-tab:hover { color: var(--ink); background: oklch(0.7 0.25 305 / 0.06); }
 }
 
 @media (max-width: 1100px) {
-  .grid { grid-template-columns: 1fr 1fr; grid-template-areas: "player feed" "notes notes" "campaigns tasks"; }
-  #panel-notes { max-height: 62vh; }
-  .panel { max-height: 48vh; }
+  .player-bar { align-items: start; }
+  #player-root { grid-template-columns: auto minmax(200px, 1fr) minmax(180px, 1fr); }
+  .player-up-next { grid-column: 1 / -1; }
+  .grid { grid-template-columns: minmax(0, 1fr) minmax(260px, 0.36fr); }
+}
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .side-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .panel { max-height: 52vh; }
 }
 
 @media (max-width: 720px) {
@@ -299,14 +365,22 @@ button.pill { appearance: none; background: transparent; cursor: pointer; }
   .account { margin-left: auto; }
   .welcome { font-size: 0.84rem; }
   .modes button { flex: 1 0 auto; }
-  .grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "player" "notes" "feed" "campaigns" "tasks"; padding: 0.7rem; }
-  .panel { min-width: 0; }
-  .panel, #panel-notes { max-height: none; overflow: visible; }
+  .player-bar { grid-template-columns: minmax(0, 1fr); gap: 0.65rem; padding: 0.75rem; }
+  .player-heading { display: flex; align-items: baseline; justify-content: space-between; }
+  #player-root { grid-template-columns: minmax(0, 1fr); gap: 0.7rem; }
+  .player-up-next { grid-column: auto; }
+  .player-controls input[type="range"] { min-width: 90px; flex: 1; }
+  .grid { grid-template-columns: minmax(0, 1fr); padding: 0.7rem; }
+  .work-hub { min-height: 0; }
+  .workspace-tab { min-width: 0; flex: 1; padding-inline: 0.75rem; }
+  .workspace-pane { padding: 0.8rem; }
+  .side-rail { grid-template-columns: minmax(0, 1fr); }
+  .panel { min-width: 0; max-height: none; overflow: visible; }
   #panel-feed { max-height: 70vh; overflow: auto; }
   .form-grid { grid-template-columns: 1fr; }
   .chat-composer { grid-template-columns: 1fr; }
   .chat-composer .btn { justify-self: end; }
-  .btn, .btn-icon, .modes button, button.pill, .text-button, .history-row { min-height: 44px; }
+  .btn, .btn-icon, .modes button, .workspace-tab, button.pill, .text-button, .history-row { min-height: 44px; }
   .btn-icon, button.pill { min-width: 44px; }
   input:not([type="checkbox"]), textarea, select { min-height: 44px; }
   input[type="range"] { min-height: 44px; }

@@ -26,6 +26,17 @@ test('filters and modes expose native pressed controls with focus keys', () => {
   assert.doesNotMatch(feed, /el\('span',[\s\S]{0,180}onclick:/);
 });
 
+test('research and campaigns share an accessible dominant workspace', () => {
+  assert.match(index, /class="player-bar" id="panel-player"/);
+  assert.match(index, /class="workspace-tabs" role="tablist"/);
+  assert.equal((index.match(/role="tab"/g) || []).length, 2);
+  assert.equal((index.match(/role="tabpanel"/g) || []).length, 2);
+  assert.match(app, /tab\.setAttribute\('aria-selected', String\(active\)\)/);
+  assert.match(app, /ArrowLeft:/);
+  assert.match(app, /ArrowRight:/);
+  assert.match(css, /\.grid\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*minmax\(280px,\s*0\.31fr\)/);
+});
+
 test('symbol controls and affected form controls have explicit names', () => {
   assert.match(player, /'aria-label': audio\.paused \? 'Play' : 'Pause'/);
   assert.match(player, /'aria-label': 'Previous track'/);

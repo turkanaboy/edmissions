@@ -103,31 +103,18 @@ function render(focusKey) {
   const activeKey = focusKey || (root.contains(document.activeElement) ? document.activeElement.dataset.focus : null);
   const track = current();
   const upNext = state.queue.slice(state.index + 1, state.index + 4);
+  const emptyMessage = state.loading
+    ? 'Tuning in…'
+    : state.mode === 'off'
+      ? 'Pick a mode to start the music.'
+      : state.fallback
+        ? `No tracks available — ${state.fallback}.`
+        : 'No tracks found for this mode.';
   mount(
     root,
-    state.loading ? el('p', { class: 'muted', text: 'Tuning in…' }) : null,
-    !state.loading && state.mode === 'off' && !track
-      ? el('p', { class: 'muted', text: 'Pick a mode to start the music.' })
-      : null,
-    !state.loading && state.mode !== 'off' && !track
-      ? el('p', {
-          class: 'muted',
-          text: state.fallback
-            ? `No tracks available — ${state.fallback}. Drop audio files in data/music or add a Jamendo client id.`
-            : 'No tracks found for this mode.',
-        })
-      : null,
-    track
-      ? el(
-          'div',
-          { class: 'stack' },
-          el('div', {}, el('strong', { text: track.name }), el('div', { class: 'meta muted', text: track.artist })),
-          state.fallback ? el('span', { class: 'pill badge', text: `⟂ ${state.fallback}` }) : null
-        )
-      : null,
     el(
       'div',
-      { class: 'row', style: 'margin-top:.6rem' },
+      { class: 'player-controls', role: 'group', 'aria-label': 'Playback controls' },
       el('button', { class: 'btn', title: 'Previous', 'aria-label': 'Previous track', 'data-focus': 'player-previous', onclick: () => play(state.index - 1, 'player-previous'), text: '⏮' }),
       el('button', {
         class: 'btn btn-neon',
@@ -150,7 +137,6 @@ function render(focusKey) {
         max: '1',
         step: '0.05',
         value: String(audio.volume),
-        style: 'width:90px',
         oninput: (e) => {
           audio.volume = Number(e.target.value);
         },
@@ -159,8 +145,7 @@ function render(focusKey) {
     el(
       'form',
       {
-        class: 'row',
-        style: 'margin-top:.6rem',
+        class: 'player-search',
         onsubmit: (e) => {
           e.preventDefault();
           const q = e.target.q.value.trim();
@@ -170,23 +155,40 @@ function render(focusKey) {
       el('input', { name: 'q', 'aria-label': 'Search music', 'data-focus': 'music-search', placeholder: 'search open-source EDM…' }),
       el('button', { class: 'btn', text: 'Go' })
     ),
-    upNext.length
-      ? el(
-          'div',
-          { style: 'margin-top:.6rem' },
-          el('div', { class: 'meta muted', text: 'Up next' }),
-          ...upNext.map((t, i) =>
-            el('div', { class: 'list-item' }, el('a', {
+    el(
+      'div',
+      { class: 'player-now' },
+      el('div', { class: 'player-group-label', text: 'Playing' }),
+      track
+        ? el(
+            'div',
+            { class: 'player-track' },
+            el('strong', { text: track.name }),
+            el('span', { text: `${track.artist}${state.fallback ? ` · ${state.fallback}` : ''}` })
+          )
+        : el('span', { class: 'muted', role: state.loading ? 'status' : undefined, text: emptyMessage })
+    ),
+    el(
+      'div',
+      { class: 'player-up-next' },
+      el('div', { class: 'player-group-label', text: 'Up next' }),
+      upNext.length
+        ? el(
+            'div',
+            { class: 'player-up-next-list' },
+            ...upNext.map((t, i) =>
+              el('a', {
               href: '#',
               text: `${t.name} — ${t.artist}`,
               onclick: (e) => {
                 e.preventDefault();
                 play(state.index + 1 + i);
               },
-            }))
+              })
+            )
           )
-        )
-      : null
+        : el('span', { class: 'muted', text: 'Queue will appear here.' })
+    )
   );
   restoreFocus(root, activeKey);
 }

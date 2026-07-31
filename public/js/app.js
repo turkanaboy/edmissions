@@ -82,6 +82,33 @@ if (welcome && capabilities.welcome) {
   welcome.textContent = capabilities.welcome;
   welcome.hidden = false;
 }
+
+const workspaceTabs = [...document.querySelectorAll('.workspace-tab')];
+const selectWorkspace = (selected) => {
+  workspaceTabs.forEach((tab) => {
+    const active = tab === selected;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+    document.getElementById(tab.getAttribute('aria-controls')).hidden = !active;
+  });
+};
+workspaceTabs.forEach((tab, index) => {
+  tab.addEventListener('click', () => selectWorkspace(tab));
+  tab.addEventListener('keydown', (event) => {
+    const nextIndex = {
+      ArrowLeft: (index - 1 + workspaceTabs.length) % workspaceTabs.length,
+      ArrowRight: (index + 1) % workspaceTabs.length,
+      Home: 0,
+      End: workspaceTabs.length - 1,
+    }[event.key];
+    if (nextIndex === undefined) return;
+    event.preventDefault();
+    selectWorkspace(workspaceTabs[nextIndex]);
+    workspaceTabs[nextIndex].focus();
+  });
+});
+
 initPlayer();
 initFeed();
 initNotes();
