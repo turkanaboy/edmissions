@@ -91,6 +91,31 @@ test('sixth rapid failure is 429 while the other user still logs in', async () =
   }
 });
 
+test('unknown username rotation shares one bounded rate-limit bucket', async () => {
+  const { server, base } = makeApp();
+  try {
+    for (let i = 0; i < 5; i++) {
+      const response = await post(base, '/api/login', { username: `missing-${i}`, password: 'wrong' });
+      assert.equal(response.status, 401);
+    }
+    const locked = await post(base, '/api/login', { username: 'another-missing-user', password: 'wrong' });
+    assert.equal(locked.status, 429);
+  } finally {
+    server.close();
+  }
+});
+
+test('oversized usernames are rejected before rate-limit storage', async () => {
+  const { server, base } = makeApp();
+  try {
+    const response = await post(base, '/api/login', { username: 'x'.repeat(101), password: 'wrong' });
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error, /username/i);
+  } finally {
+    server.close();
+  }
+});
+
 test('logout clears the session cookie and de-authenticates it', async () => {
   const { server, base } = makeApp();
   try {

@@ -2,11 +2,23 @@ import { Router } from 'express';
 
 const MAX_SLATE_BYTES = 1_000_000;
 const MAX_SLATE_ROWS = 1_000;
-const MAX_SLATE_COLUMNS = 50;
 const MAX_SLATE_REDIRECTS = 3;
 const SLATE_HOST_SUFFIXES = ['delhi.edu', 'technolutions.net'];
 const PERSON_LEVEL_COLUMNS = new Set(['id', 'guid', 'name']);
-const PERSON_LEVEL_COLUMN = /(^|_)(email|e_mail|student_?id|person_?id|record_?id|first_?name|last_?name|full_?name|preferred_?name|birth_?date|date_?of_?birth|dob|phone(?:_?number)?|mobile|(?:street|mailing|home)_?address)(_|$)/;
+const PERSON_LEVEL_COLUMN = /(^|_)(email|e_mail|ssn|social_?security(?:_?number)?|student_?(?:id|number)|emplid|person_?id|record_?id|first_?name|last_?name|full_?name|preferred_?name|birth_?date|date_?of_?birth|dob|phone(?:_?number)?|mobile|(?:street|mailing|home)_?address)(_|$)/;
+const SLATE_HEADERS = [
+  'term',
+  'stage',
+  'program',
+  'residency',
+  'geography',
+  'source',
+  'count',
+  'prior_year_count',
+  'goal',
+];
+const SLATE_TEXT_FIELDS = SLATE_HEADERS.slice(0, 6);
+const SLATE_NUMBER_FIELDS = SLATE_HEADERS.slice(6);
 const SUNY_SOURCE_URL = 'https://data.ny.gov/Education/Headcount-Enrollment-by-Student-Level-and-Student-/4fyc-bf8i';
 const SUNY_API_URL = 'https://data.ny.gov/resource/4fyc-bf8i.json';
 const SUNY_SOURCE_LABEL = 'SUNY System Administration, Office of Institutional Research';
@@ -137,15 +149,27 @@ export function normalizeSlateEndpoint(value) {
 }
 
 function assertAggregateColumns(columns) {
-  if (!columns.length || columns.length > MAX_SLATE_COLUMNS) {
-    throw new Error(`Slate response must contain between 1 and ${MAX_SLATE_COLUMNS} columns`);
-  }
-  if (columns.some((column) => {
-    const header = normalizeHeader(column);
-    return PERSON_LEVEL_COLUMNS.has(header) || PERSON_LEVEL_COLUMN.test(header);
-  })) {
+  const normalized = columns.map(normalizeHeader);
+  if (normalized.some((header) => PERSON_LEVEL_COLUMNS.has(header) || PERSON_LEVEL_COLUMN.test(header))) {
     throw new Error('Slate response must be aggregate-only; remove person-level columns from the query');
   }
+  if (new Set(normalized).size !== normalized.length
+      || normalized.length !== SLATE_HEADERS.length
+      || SLATE_HEADERS.some((header) => !normalized.includes(header))) {
+    throw new Error(`Slate response headers must be exactly: ${SLATE_HEADERS.join(', ')}`);
+  }
+  return normalized;
+}
+
+function validateAggregateRows(columns, rows) {
+  const index = Object.fromEntries(columns.map((column, position) => [column, position]));
+  rows.forEach((row, rowIndex) => {
+    if (row.length !== columns.length) throw new Error(`Slate row ${rowIndex + 1} has the wrong number of columns`);
+    for (const field of SLATE_TEXT_FIELDS) textField(row[index[field]], `Slate row ${rowIndex + 1} ${field}`);
+    for (const field of SLATE_NUMBER_FIELDS) {
+      aggregateNumber(row[index[field]], `Slate row ${rowIndex + 1} ${field}`, field !== 'count');
+    }
+  });
 }
 
 const cellText = (value) => {
@@ -163,33 +187,35 @@ function tableFromJson(value) {
   }
   if (!rows.length) {
     const columns = Array.isArray(value?.columns) ? value.columns.map(String) : [];
-    if (columns.length) assertAggregateColumns(columns);
-    return { columns, rows: [] };
+    return { columns: assertAggregateColumns(columns), rows: [] };
   }
   if (rows.every(Array.isArray)) {
     const width = Math.max(...rows.map((row) => row.length));
-    const columns = Array.isArray(value?.columns) && value.columns.length === width
-      ? value.columns.map(String)
-      : Array.from({ length: width }, (_, index) => `Column ${index + 1}`);
-    assertAggregateColumns(columns);
-    return { columns, rows: rows.map((row) => columns.map((_, index) => cellText(row[index]))) };
+    if (!Array.isArray(value?.columns) || value.columns.length !== width) {
+      throw new Error('Slate JSON array rows require explicit columns that match each row');
+    }
+    const columns = assertAggregateColumns(value.columns.map(String));
+    validateAggregateRows(columns, rows);
+    return { columns, rows: rows.map((row) => row.map(cellText)) };
   }
   if (!rows.every((row) => row && typeof row === 'object' && !Array.isArray(row))) {
     throw new Error('Slate JSON rows must be objects or arrays');
   }
-  const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
-  assertAggregateColumns(columns);
-  return { columns, rows: rows.map((row) => columns.map((column) => cellText(row[column]))) };
+  const sourceColumns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+  const columns = assertAggregateColumns(sourceColumns);
+  const sourceByColumn = Object.fromEntries(sourceColumns.map((column) => [normalizeHeader(column), column]));
+  const tableRows = rows.map((row) => columns.map((column) => row[sourceByColumn[column]]));
+  validateAggregateRows(columns, tableRows);
+  return { columns, rows: tableRows.map((row) => row.map(cellText)) };
 }
 
 function tableFromCsv(text) {
   const parsed = parseCsv(text);
   if (!parsed.length) throw new Error('Slate returned an empty table');
-  const columns = parsed[0].map((column, index) => String(column || '').trim() || `Column ${index + 1}`);
-  assertAggregateColumns(columns);
+  const columns = assertAggregateColumns(parsed[0]);
   const rows = parsed.slice(1);
   if (rows.length > MAX_SLATE_ROWS) throw new Error(`Slate query must return ${MAX_SLATE_ROWS} rows or fewer`);
-  if (rows.some((row) => row.length !== columns.length)) throw new Error('Slate CSV rows have inconsistent columns');
+  validateAggregateRows(columns, rows);
   return { columns, rows: rows.map((row) => row.map(cellText)) };
 }
 

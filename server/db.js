@@ -151,9 +151,7 @@ export function openDb(dataDir) {
     }
   };
   // Existing installs predate these additive fields.
-  if (!db.prepare('PRAGMA table_info(campaign_templates)').all().some((c) => c.name === 'html_body')) {
-    db.exec("ALTER TABLE campaign_templates ADD COLUMN html_body TEXT NOT NULL DEFAULT ''");
-  }
+  addColumns('campaign_templates', { html_body: "TEXT NOT NULL DEFAULT ''" });
   addColumns('articles', { lane: "TEXT NOT NULL DEFAULT 'national'" });
   addColumns('notes', { source_context: "TEXT NOT NULL DEFAULT '{}'" });
   addColumns('tasks', { source_context: "TEXT NOT NULL DEFAULT '{}'" });

@@ -1,6 +1,8 @@
 import Parser from 'rss-parser';
 
 const UA = 'Mozilla/5.0 (compatible; EDMissions/0.1; personal dashboard)';
+const MAX_FEED_BYTES = 1_000_000;
+const MAX_FEED_ITEMS = 200;
 const parser = new Parser();
 const LANE_RANK = { campus: 0, local: 1, suny: 2, national: 3 };
 const laneFor = (feed) => Object.hasOwn(LANE_RANK, feed.lane) ? feed.lane : 'national';
@@ -56,6 +58,27 @@ export function normalizeItem(item, feed) {
   };
 }
 
+async function readFeedText(response) {
+  const length = Number(response.headers.get('content-length') || 0);
+  if (length > MAX_FEED_BYTES) throw new Error('Feed response must be 1 MB or smaller');
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = '';
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    bytes += value.byteLength;
+    if (bytes > MAX_FEED_BYTES) {
+      await reader.cancel();
+      throw new Error('Feed response must be 1 MB or smaller');
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
+}
+
 export async function pollOnce(db, config) {
   const insert = db.prepare(
     'INSERT OR IGNORE INTO articles (source, lane, title, link, excerpt, published_at, score) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -74,8 +97,8 @@ export async function pollOnce(db, config) {
         signal: AbortSignal.timeout(15_000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const parsed = await parser.parseString(await res.text());
-      for (const item of parsed.items || []) {
+      const parsed = await parser.parseString(await readFeedText(res));
+      for (const item of (parsed.items || []).slice(0, MAX_FEED_ITEMS)) {
         const a = normalizeItem(item, feed);
         if (!a.title || !a.link || !keepArticleTitle(a.title, a.lane)) continue;
         const score = scoreText(a.title, a.excerpt, config.content.keywords);

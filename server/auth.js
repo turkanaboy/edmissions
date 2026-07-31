@@ -3,6 +3,7 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 const SESSION_DAYS = 7;
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_FAILS = 5;
+const MAX_USERNAME_LENGTH = 100;
 
 // SHA-256 digests are always equal length, so timingSafeEqual never throws on a typo'd password
 const sha256 = (s) => createHash('sha256').update(String(s)).digest();
@@ -50,7 +51,11 @@ export function createAuth(config) {
 
   const login = (req, res) => {
     const { username, password } = req.body || {};
-    const key = `${req.ip}|${username}`;
+    if (typeof username !== 'string' || !username || username.length > MAX_USERNAME_LENGTH) {
+      return res.status(400).json({ error: `Username must be between 1 and ${MAX_USERNAME_LENGTH} characters` });
+    }
+    const user = config.users.find((candidate) => candidate.username === username);
+    const key = `${req.ip}|${user?.username || '__unknown__'}`;
     // sweep expired entries so username rotation can't grow the Map unbounded
     const now0 = Date.now();
     for (const [k, v] of attempts) if (now0 >= v.resetAt) attempts.delete(k);
@@ -58,7 +63,6 @@ export function createAuth(config) {
     if (failed && failed.count >= MAX_FAILS && Date.now() < failed.resetAt) {
       return res.status(429).json({ error: 'Too many attempts — try again in a few minutes' });
     }
-    const user = config.users.find((u) => u.username === username);
     const stored = user ? user.password : '__no_such_user__';
     const ok = timingSafeEqual(sha256(password ?? ''), sha256(stored)) && Boolean(user);
     if (!ok) {

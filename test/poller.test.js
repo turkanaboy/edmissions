@@ -139,6 +139,44 @@ test('a higher-priority duplicate upgrades its lane without losing its star', as
   }
 });
 
+test('feed polling rejects oversized bodies before parsing', async () => {
+  const db = freshDb();
+  const config = testConfig([{ name: 'Oversized', url: 'https://oversized.example.com/rss' }]);
+  const restore = stubFetch(
+    (url) => url.includes('example.com'),
+    () => new Response('x'.repeat(1_000_001), { headers: { 'Content-Type': 'application/rss+xml' } })
+  );
+  try {
+    const result = await pollOnce(db, config);
+    assert.equal(result.added, 0);
+    assert.equal(result.failed.length, 1);
+    assert.match(result.failed[0].error, /1 MB|too large/i);
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM articles').get().n, 0);
+  } finally {
+    restore();
+    db.close();
+  }
+});
+
+test('feed polling caps work to the first 200 parsed items', async () => {
+  const db = freshDb();
+  const items = Array.from({ length: 205 }, (_, index) =>
+    `<item><title>Enrollment story ${index}</title><link>https://ex.com/item-${index}</link></item>`
+  ).join('');
+  const rss = `<?xml version="1.0"?><rss version="2.0"><channel><title>Many</title>${items}</channel></rss>`;
+  const config = testConfig([{ name: 'Many', url: 'https://many.example.com/rss' }]);
+  const restore = stubFetch((url) => url.includes('example.com'), () => new Response(rss));
+  try {
+    const result = await pollOnce(db, config);
+    assert.equal(result.added, 200);
+    assert.equal(result.failed.length, 0);
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM articles').get().n, 200);
+  } finally {
+    restore();
+    db.close();
+  }
+});
+
 test('job headlines require both a VP variation and enrollment', () => {
   assert.equal(keepArticleTitle('Director of Admissions job opening'), false);
   assert.equal(keepArticleTitle('Hiring a VP for Enrollment Strategy'), true);

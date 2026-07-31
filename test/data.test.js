@@ -36,6 +36,43 @@ const goodSunyRows = [
   },
 ];
 
+const slateHeaders = [
+  'term',
+  'stage',
+  'program',
+  'residency',
+  'geography',
+  'source',
+  'count',
+  'prior_year_count',
+  'goal',
+];
+
+const goodSlateRows = [
+  {
+    term: 'Fall 2026',
+    stage: 'Applicant',
+    program: 'Hospitality',
+    residency: 'New York',
+    geography: 'Upstate',
+    source: 'Inquiry',
+    count: 120,
+    prior_year_count: 110,
+    goal: 130,
+  },
+  {
+    term: 'Fall 2026',
+    stage: 'Admit',
+    program: 'Hospitality',
+    residency: 'New York',
+    geography: 'Upstate',
+    source: 'Inquiry',
+    count: 80,
+    prior_year_count: 72,
+    goal: 90,
+  },
+];
+
 test('database startup purges legacy Slate snapshots', () => {
   const { server, app, config } = bootApp();
   try {
@@ -55,10 +92,7 @@ test('Slate web service returns a transient JSON table without storing or echoin
   const endpoint = 'https://apply.delhi.edu/manage/query/run?id=funnel&key=secret';
   const restore = stubFetch(
     (url) => url.startsWith('https://apply.delhi.edu/'),
-    () => new Response(JSON.stringify([
-      { term: 'Fall 2026', stage: 'Applicant', count: 120 },
-      { term: 'Fall 2026', stage: 'Admit', count: 80 },
-    ]), { headers: { 'Content-Type': 'application/json' } })
+    () => new Response(JSON.stringify(goodSlateRows), { headers: { 'Content-Type': 'application/json' } })
   );
   const { server, base, app } = bootApp();
   try {
@@ -66,8 +100,8 @@ test('Slate web service returns a transient JSON table without storing or echoin
     const response = await s.post('/api/data/slate/fetch', { url: endpoint });
     assert.equal(response.status, 200);
     const data = await response.json();
-    assert.deepEqual(data.columns, ['term', 'stage', 'count']);
-    assert.deepEqual(data.rows[1], ['Fall 2026', 'Admit', '80']);
+    assert.deepEqual(data.columns, slateHeaders);
+    assert.deepEqual(data.rows[1], ['Fall 2026', 'Admit', 'Hospitality', 'New York', 'Upstate', 'Inquiry', '80', '72', '90']);
     assert.equal(data.row_count, 2);
     assert.match(data.retrieved_at, /^\d{4}-\d{2}-\d{2}T/);
     assert.doesNotMatch(JSON.stringify(data), /key=secret|apply\.delhi\.edu/);
@@ -86,7 +120,7 @@ test('Slate web service follows safe redirects, parses CSV, and rejects unsafe e
     (url) => {
       calls += 1;
       if (mode === 'pii') {
-        return new Response('stage,primary_email,count\nApplicant,a@example.edu,1', {
+        return new Response('ssn,count\n123-45-6789,1', {
           headers: { 'Content-Type': 'text/csv' },
         });
       }
@@ -102,7 +136,7 @@ test('Slate web service follows safe redirects, parses CSV, and rejects unsafe e
           headers: { Location: 'https://suny-delhi.slate.technolutions.net/export' },
         });
       }
-      return new Response('stage,program,count\nApplicant,"Hospitality, Management",120', {
+      return new Response(`${slateHeaders.join(',')}\nFall 2026,Applicant,"Hospitality, Management",New York,Upstate,Inquiry,120,110,130`, {
         headers: { 'Content-Type': 'text/csv' },
       });
     }
@@ -115,8 +149,8 @@ test('Slate web service follows safe redirects, parses CSV, and rejects unsafe e
     });
     assert.equal(response.status, 200);
     const data = await response.json();
-    assert.deepEqual(data.columns, ['stage', 'program', 'count']);
-    assert.deepEqual(data.rows[0], ['Applicant', 'Hospitality, Management', '120']);
+    assert.deepEqual(data.columns, slateHeaders);
+    assert.deepEqual(data.rows[0], ['Fall 2026', 'Applicant', 'Hospitality, Management', 'New York', 'Upstate', 'Inquiry', '120', '110', '130']);
     assert.equal(calls, 2);
 
     mode = 'unsafe-redirect';
@@ -142,6 +176,43 @@ test('Slate web service follows safe redirects, parses CSV, and rejects unsafe e
     assert.equal(pii.status, 502);
     assert.match((await pii.json()).error, /aggregate/i);
     assert.equal(app.locals.db.prepare("SELECT COUNT(*) AS n FROM data_snapshots WHERE kind = 'slate'").get().n, 0);
+  } finally {
+    restore();
+    server.close();
+  }
+});
+
+test('Slate web service enforces the approved aggregate schema and count fields', async () => {
+  let body = JSON.stringify({ rows: [['Fall 2026', 'Applicant', 'Hospitality', 'New York', 'Upstate', 'Inquiry', 1, 1, 1]] });
+  const restore = stubFetch(
+    (url) => url.includes('technolutions.net'),
+    () => new Response(body, { headers: { 'Content-Type': 'application/json' } })
+  );
+  const { server, base } = bootApp();
+  try {
+    const session = await login(base);
+    const fetchSlate = () => session.post('/api/data/slate/fetch', {
+      url: 'https://suny-delhi.slate.technolutions.net/export',
+    });
+
+    const unlabeled = await fetchSlate();
+    assert.equal(unlabeled.status, 502);
+    assert.match((await unlabeled.json()).error, /columns|schema/i);
+
+    body = JSON.stringify([{ ...goodSlateRows[0], count: -1 }]);
+    const negative = await fetchSlate();
+    assert.equal(negative.status, 502);
+    assert.match((await negative.json()).error, /count|non-negative/i);
+
+    body = JSON.stringify([{ ...goodSlateRows[0], count: 'many' }]);
+    const nonNumeric = await fetchSlate();
+    assert.equal(nonNumeric.status, 502);
+    assert.match((await nonNumeric.json()).error, /count|number/i);
+
+    body = JSON.stringify([{ ...goodSlateRows[0], narrative: 'student-level free text' }]);
+    const extraColumn = await fetchSlate();
+    assert.equal(extraColumn.status, 502);
+    assert.match((await extraColumn.json()).error, /headers|schema/i);
   } finally {
     restore();
     server.close();
