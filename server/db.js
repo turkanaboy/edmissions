@@ -64,15 +64,29 @@ export function openDb(dataDir) {
       message_count INTEGER NOT NULL,
       format TEXT NOT NULL DEFAULT 'text',
       output TEXT NOT NULL,
+      audience TEXT NOT NULL DEFAULT '',
+      sender TEXT NOT NULL DEFAULT '',
+      channel TEXT NOT NULL DEFAULT '',
+      deadline TEXT NOT NULL DEFAULT '',
+      source_context TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
-  // Existing installs predate these two additive fields.
+  // Existing installs predate these additive fields.
   if (!db.prepare('PRAGMA table_info(campaign_templates)').all().some((c) => c.name === 'html_body')) {
     db.exec("ALTER TABLE campaign_templates ADD COLUMN html_body TEXT NOT NULL DEFAULT ''");
   }
-  if (!db.prepare('PRAGMA table_info(campaigns)').all().some((c) => c.name === 'format')) {
-    db.exec("ALTER TABLE campaigns ADD COLUMN format TEXT NOT NULL DEFAULT 'text'");
+  const campaignColumns = new Set(db.prepare('PRAGMA table_info(campaigns)').all().map((column) => column.name));
+  const additions = {
+    format: "TEXT NOT NULL DEFAULT 'text'",
+    audience: "TEXT NOT NULL DEFAULT ''",
+    sender: "TEXT NOT NULL DEFAULT ''",
+    channel: "TEXT NOT NULL DEFAULT ''",
+    deadline: "TEXT NOT NULL DEFAULT ''",
+    source_context: "TEXT NOT NULL DEFAULT '{}'",
+  };
+  for (const [name, definition] of Object.entries(additions)) {
+    if (!campaignColumns.has(name)) db.exec(`ALTER TABLE campaigns ADD COLUMN ${name} ${definition}`);
   }
   return db;
 }

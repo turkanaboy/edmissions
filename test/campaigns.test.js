@@ -9,6 +9,20 @@ const FORM = {
   message_count: 4,
 };
 
+const COMPLETE_FORM = {
+  ...FORM,
+  audience: 'Admitted students and families',
+  sender: 'SUNY Delhi Admissions',
+  channel: 'email',
+  deadline: '2026-08-21',
+  source_context: {
+    title: 'Financial aid dates',
+    publisher: 'SUNY Delhi',
+    url: 'https://www.delhi.edu/admission/financial-aid/deadlines/',
+    lane: 'campus',
+  },
+};
+
 test('a default template is seeded on first boot', async () => {
   const { server, base } = bootApp();
   try {
@@ -50,6 +64,14 @@ test('validation: missing fields, bad URL, and out-of-range count are 400s', asy
     const s = await login(base);
     assert.equal((await s.post('/api/campaigns/brief', { ...FORM, cta_link: '' })).status, 400);
     assert.equal((await s.post('/api/campaigns/brief', { ...FORM, cta_link: 'not a url' })).status, 400);
+    assert.equal((await s.post('/api/campaigns/brief', { ...FORM, cta_link: 'javascript:alert(1)' })).status, 400);
+    assert.equal(
+      (await s.post('/api/campaigns/brief', {
+        ...FORM,
+        source_context: { title: 'Unsafe source', url: 'javascript:alert(1)' },
+      })).status,
+      400
+    );
     assert.equal((await s.post('/api/campaigns/brief', { ...FORM, message_count: 0 })).status, 400);
     assert.equal((await s.post('/api/campaigns/brief', { ...FORM, message_count: 99 })).status, 400);
   } finally {
@@ -106,6 +128,79 @@ test('SUNY Delhi campus memory is seeded, editable, and included in handoff brie
     const brief = await (await s.post('/api/campaigns/brief', FORM)).json();
     assert.match(brief.output, /North Country Technical College/);
     assert.match(brief.output, /Offers evening programs/);
+  } finally {
+    server.close();
+  }
+});
+
+test('campaign context persists and preflight stays advisory', async () => {
+  const { server, base } = bootApp();
+  try {
+    const s = await login(base);
+    const complete = await (await s.post('/api/campaigns/brief', COMPLETE_FORM)).json();
+    assert.equal(complete.audience, COMPLETE_FORM.audience);
+    assert.equal(complete.sender, COMPLETE_FORM.sender);
+    assert.equal(complete.channel, COMPLETE_FORM.channel);
+    assert.equal(complete.deadline, COMPLETE_FORM.deadline);
+    assert.deepEqual(complete.source_context, COMPLETE_FORM.source_context);
+
+    const completeCheck = await (await s.get(`/api/campaigns/${complete.id}/preflight`)).json();
+    const completeCodes = completeCheck.findings.map((finding) => finding.code);
+    for (const code of ['missing_audience', 'missing_sender', 'missing_channel', 'missing_deadline', 'missing_source']) {
+      assert.ok(!completeCodes.includes(code), `${code} should not be present`);
+    }
+
+    const incomplete = await (await s.post('/api/campaigns/brief', FORM)).json();
+    const incompleteCheck = await (await s.get(`/api/campaigns/${incomplete.id}/preflight`)).json();
+    const incompleteCodes = incompleteCheck.findings.map((finding) => finding.code);
+    for (const code of ['missing_audience', 'missing_sender', 'missing_channel', 'missing_deadline', 'missing_source']) {
+      assert.ok(incompleteCodes.includes(code), `${code} should be advisory`);
+    }
+    assert.equal((await s.get(`/api/campaigns/${incomplete.id}/preflight`)).status, 200);
+    assert.equal((await fetch(`${base}/api/campaigns/${incomplete.id}/preflight`)).status, 401);
+  } finally {
+    server.close();
+  }
+});
+
+test('preflight detects placeholders, deadline drift, repetition, links, and HTML accessibility', async () => {
+  const { server, base, app } = bootApp();
+  try {
+    const s = await login(base);
+    const output = [
+      '<html><body>',
+      '<img src="hero.jpg">',
+      '<a href="">Apply now</a>',
+      '<p>Hello {{first_name}}</p>',
+      '<p>This exact sentence is intentionally repeated so the preflight can catch it.</p>',
+      '<p>This exact sentence is intentionally repeated so the preflight can catch it.</p>',
+      '</body></html>',
+    ].join('');
+    const info = app.locals.db.prepare(
+      `INSERT INTO campaigns
+       (kind, purpose, cta, cta_link, message_count, format, output, audience, sender, channel, deadline, source_context)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      'generated',
+      'Deadline reminder',
+      'Apply now',
+      'https://college.example.edu/apply',
+      2,
+      'html',
+      output,
+      'Prospective students',
+      'Admissions',
+      'email',
+      '2026-08-21',
+      JSON.stringify({ title: 'Official deadline', url: 'https://college.example.edu/deadlines' })
+    );
+
+    const check = await (await s.get(`/api/campaigns/${info.lastInsertRowid}/preflight`)).json();
+    const codes = check.findings.map((finding) => finding.code);
+    for (const code of ['placeholder', 'deadline_mismatch', 'repetition', 'cta_link_missing', 'image_alt', 'link_href']) {
+      assert.ok(codes.includes(code), `${code} should be detected`);
+    }
+    assert.equal(app.locals.db.prepare('SELECT output FROM campaigns WHERE id = ?').get(info.lastInsertRowid).output, output);
   } finally {
     server.close();
   }

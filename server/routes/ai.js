@@ -1,5 +1,13 @@
 import { Router } from 'express';
-import { campaignFields, campusContext, pickTemplate, renderTemplate, validateCampaignInput } from './campaigns.js';
+import {
+  campaignFields,
+  campusContext,
+  insertCampaign,
+  pickTemplate,
+  renderCampaignBrief,
+  renderTemplate,
+  validateCampaignInput,
+} from './campaigns.js';
 import { NOTE_JOIN, parseNote } from './notes.js';
 
 // Errors are logged as metadata only — never the note or campaign text (it can carry
@@ -74,7 +82,7 @@ export function aiRoutes() {
     const tpl = pickTemplate(db, req.body.template_id);
     if (!tpl) return res.status(400).json({ error: 'No template available' });
     const fullFields = campaignFields(db, fields);
-    let brief = renderTemplate(tpl.body, fullFields);
+    let brief = renderCampaignBrief(db, tpl, fields);
     const format = req.body.output_format === 'html' ? 'html' : 'text';
     if (format === 'html') {
       if (!tpl.html_body?.trim()) return res.status(400).json({ error: 'Add an HTML template before generating HTML' });
@@ -82,10 +90,7 @@ export function aiRoutes() {
     }
     try {
       const output = await req.app.locals.ai.generateCampaign(brief, fields.message_count, format);
-      const info = db
-        .prepare('INSERT INTO campaigns (kind, purpose, cta, cta_link, message_count, format, output) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run('generated', fields.purpose, fields.cta, fields.cta_link, fields.message_count, format, output);
-      res.status(201).json(db.prepare('SELECT * FROM campaigns WHERE id = ?').get(info.lastInsertRowid));
+      res.status(201).json(insertCampaign(db, 'generated', format, output, fields));
     } catch (err) {
       logAiError('generate campaign', null, err);
       res.status(502).json({ error: 'AI request failed — try again' });

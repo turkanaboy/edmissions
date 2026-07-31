@@ -6,11 +6,24 @@ const state = {
   campaigns: [],
   campus: null,
   viewing: null,
+  preflight: null,
+  preflightError: null,
   settings: null,
   busy: false,
   error: null,
   copied: false,
-  form: { purpose: '', cta: '', cta_link: '', message_count: 3, template_id: null },
+  form: {
+    purpose: '',
+    cta: '',
+    cta_link: '',
+    message_count: 3,
+    template_id: null,
+    audience: '',
+    sender: '',
+    channel: '',
+    deadline: '',
+    source_context: {},
+  },
 };
 
 const field = (label, control, hint) =>
@@ -39,8 +52,11 @@ async function submit(kind) {
     const created = await api(path, { method: 'POST', body: JSON.stringify(body) });
     state.busy = false;
     state.viewing = created;
+    state.preflight = null;
+    state.preflightError = null;
     state.copied = false;
     await load();
+    await loadPreflight(created.id);
     announce(kind === 'brief' ? 'Handoff brief ready.' : kind === 'html' ? 'HTML campaign ready.' : 'Text campaign ready.');
   } catch (err) {
     state.busy = false;
@@ -69,6 +85,59 @@ async function copyOutput() {
 
 const currentTemplate = () => state.templates.find((t) => t.id === Number(state.form.template_id));
 
+async function loadPreflight(id) {
+  try {
+    state.preflight = await api(`/api/campaigns/${id}/preflight`);
+    state.preflightError = null;
+  } catch (err) {
+    state.preflightError = err.message;
+  }
+  render();
+}
+
+function openCampaign(campaign) {
+  state.viewing = campaign;
+  state.preflight = null;
+  state.preflightError = null;
+  state.copied = false;
+  state.error = null;
+  render();
+  loadPreflight(campaign.id);
+}
+
+function preflightView() {
+  const check = state.preflight;
+  return el(
+    'section',
+    { class: 'preflight', role: 'region', 'aria-labelledby': 'preflight-heading' },
+    el(
+      'div',
+      { class: 'preflight-title' },
+      el('div', {}, el('h3', { id: 'preflight-heading', text: 'Campaign preflight' }), el('span', { text: 'Review before release' })),
+      el('span', { class: 'pill preflight-badge', text: 'Advisory' })
+    ),
+    state.preflightError ? el('p', { class: 'error', role: 'alert', text: state.preflightError }) : null,
+    !check && !state.preflightError ? el('p', { class: 'muted', role: 'status', text: 'Checking campaign context…' }) : null,
+    check && !check.findings.length
+      ? el('p', { class: 'preflight-clear', text: 'No deterministic warnings found. Give the final copy a human read.' })
+      : null,
+    check?.findings.length
+      ? el(
+          'ul',
+          { class: 'preflight-list' },
+          ...check.findings.map((finding) =>
+            el(
+              'li',
+              { class: `preflight-item preflight-${finding.severity}` },
+              el('strong', { text: finding.title }),
+              el('p', { text: finding.detail })
+            )
+          )
+        )
+      : null
+  );
+}
+
 function viewingView() {
   const c = state.viewing;
   const format = c.kind === 'brief' ? 'handoff brief' : c.format === 'html' ? 'HTML campaign' : 'text campaign';
@@ -80,9 +149,31 @@ function viewingView() {
       { class: 'row' },
       el('span', { class: 'pill badge', text: format }),
       el('span', { class: 'meta muted', text: c.purpose.slice(0, 60) }),
-      el('button', { class: 'btn btn-ghost push-right', text: '← Back', onclick: () => { state.viewing = null; render(); } })
+      el('button', {
+        class: 'btn btn-ghost push-right',
+        text: '← Back',
+        onclick: () => {
+          state.viewing = null;
+          state.preflight = null;
+          render();
+        },
+      })
+    ),
+    el(
+      'div',
+      { class: 'campaign-context-summary' },
+      ...[
+        c.audience,
+        c.sender,
+        c.channel ? c.channel.toUpperCase() : '',
+        c.deadline,
+        c.source_context?.publisher || c.source_context?.title,
+      ]
+        .filter(Boolean)
+        .map((text) => el('span', { class: 'pill', text }))
     ),
     el('textarea', { class: 'output-area', rows: '14', readonly: '', text: c.output }),
+    preflightView(),
     state.error ? el('p', { class: 'error', role: 'alert', text: state.error }) : null,
     el(
       'div',
@@ -94,6 +185,7 @@ function viewingView() {
         onclick: async () => {
           await api(`/api/campaigns/${c.id}`, { method: 'DELETE' }).catch(() => {});
           state.viewing = null;
+          state.preflight = null;
           load();
         },
       })
@@ -151,7 +243,7 @@ function templateView() {
   return el(
     'div',
     { class: 'stack settings-pane' },
-    field('Writing instructions', el('textarea', { rows: '9', text: draft.body, oninput: (e) => (draft.body = e.target.value) }), 'Available: {{campus}}, {{purpose}}, {{cta}}, {{cta_link}}, {{message_count}}'),
+    field('Writing instructions', el('textarea', { rows: '9', text: draft.body, oninput: (e) => (draft.body = e.target.value) }), 'Available: {{campus}}, {{purpose}}, {{cta}}, {{cta_link}}, {{message_count}}, {{audience}}, {{sender}}, {{channel}}, {{deadline}}, {{source}}'),
     field('Optional HTML message template', el('textarea', {
       class: 'code-input',
       rows: '9',
@@ -191,6 +283,23 @@ function formView() {
   if (state.settings === 'template') return templateView();
   const f = state.form;
   const template = currentTemplate();
+  const source = f.source_context || (f.source_context = {});
+  const channel = el(
+    'select',
+    { onchange: (e) => (f.channel = e.target.value) },
+    ...[
+      ['', 'Select channel'],
+      ['email', 'Email'],
+      ['sms', 'SMS / text'],
+      ['social', 'Social'],
+      ['web', 'Web'],
+      ['other', 'Other'],
+    ].map(([value, label]) => {
+      const option = el('option', { value, text: label });
+      if (value === f.channel) option.selected = true;
+      return option;
+    })
+  );
   return el(
     'div',
     { class: 'stack' },
@@ -202,6 +311,18 @@ function formView() {
     el('div', { class: 'form-grid' },
       field('Call to action', el('input', { placeholder: 'Complete your FAFSA', value: f.cta, oninput: (e) => (f.cta = e.target.value) })),
       field('CTA link', el('input', { type: 'url', placeholder: 'https://…', value: f.cta_link, oninput: (e) => (f.cta_link = e.target.value) }))
+    ),
+    el('div', { class: 'form-grid' },
+      field('Audience', el('input', { placeholder: 'Admitted students and families', value: f.audience, oninput: (e) => (f.audience = e.target.value) })),
+      field('Sender', el('input', { placeholder: 'SUNY Delhi Admissions', value: f.sender, oninput: (e) => (f.sender = e.target.value) }))
+    ),
+    el('div', { class: 'form-grid' },
+      field('Channel', channel),
+      field('Deadline', el('input', { type: 'date', value: f.deadline, oninput: (e) => (f.deadline = e.target.value) }))
+    ),
+    el('div', { class: 'form-grid' },
+      field('Source title', el('input', { placeholder: 'Official page or article', value: source.title || '', oninput: (e) => (source.title = e.target.value) })),
+      field('Source URL', el('input', { type: 'url', placeholder: 'https://…', value: source.url || '', oninput: (e) => (source.url = e.target.value) }))
     ),
     el('div', { class: 'form-grid form-grid-compact' },
       field('Messages', el('input', { type: 'number', min: '1', max: '20', value: String(f.message_count), oninput: (e) => (f.message_count = Number(e.target.value)) })),
@@ -224,7 +345,7 @@ function formView() {
       el('h3', { text: 'Recent work' }),
       ...state.campaigns.slice(0, 6).map((campaign) => el('button', {
         class: 'history-row',
-        onclick: () => { state.viewing = campaign; state.copied = false; render(); },
+        onclick: () => openCampaign(campaign),
       },
       el('span', { text: campaign.purpose.slice(0, 60) }),
       el('small', { text: `${campaign.kind === 'brief' ? 'Brief' : campaign.format === 'html' ? 'HTML' : 'Text'} · ${new Date(campaign.created_at + 'Z').toLocaleDateString()}` })

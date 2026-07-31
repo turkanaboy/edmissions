@@ -63,6 +63,18 @@ test('dashboard feedback uses one polite announcer and visible status semantics'
   for (const source of [notes, feed, campaigns]) assert.match(source, /announce\('/);
 });
 
+test('campaign preflight is labeled, non-blocking, and keeps HTML inert', () => {
+  for (const label of ['Audience', 'Sender', 'Channel', 'Deadline', 'Source title', 'Source URL']) {
+    assert.match(campaigns, new RegExp(`field\\('${label}'`));
+  }
+  assert.match(campaigns, /aria-labelledby.*preflight-heading/);
+  assert.match(campaigns, /Campaign preflight/);
+  assert.match(campaigns, /Advisory/);
+  assert.match(campaigns, /Copy output/);
+  assert.match(campaigns, /class: 'output-area'/);
+  assert.doesNotMatch(campaigns, /innerHTML|srcdoc/);
+});
+
 test('mobile targets, theme colors, and reduced motion remain centralized', () => {
   assert.match(css, /--star:/);
   assert.match(css, /--viz-trail-full:/);

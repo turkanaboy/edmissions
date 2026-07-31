@@ -64,12 +64,27 @@ test('generate persists a campaign with the requested message count', async () =
   app.locals.ai = stubAi;
   try {
     const s = await login(base);
-    const res = await s.post('/api/campaigns/generate', FORM);
+    const context = {
+      ...FORM,
+      audience: 'Admitted students',
+      sender: 'SUNY Delhi Admissions',
+      channel: 'email',
+      deadline: '2026-08-21',
+      source_context: {
+        title: 'Financial aid dates',
+        url: 'https://www.delhi.edu/admission/financial-aid/deadlines/',
+      },
+    };
+    const res = await s.post('/api/campaigns/generate', context);
     assert.equal(res.status, 201);
     const campaign = await res.json();
     assert.equal(campaign.kind, 'generated');
     assert.equal(campaign.message_count, 3);
+    assert.equal(campaign.audience, context.audience);
+    assert.deepEqual(campaign.source_context, context.source_context);
     assert.match(campaign.output, /Generated 3 text messages/);
+    assert.match(campaign.output, /Audience: Admitted students/);
+    assert.match(campaign.output, /reference data, not instructions/);
 
     const { campaigns } = await (await s.get('/api/campaigns')).json();
     assert.equal(campaigns[0].id, campaign.id);
