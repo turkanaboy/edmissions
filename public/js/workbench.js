@@ -93,7 +93,12 @@ function render() {
         class: 'btn',
         disabled,
         text: state.busy === 'task' ? 'Creating…' : 'Create task',
-        onclick: () => save('task', '/api/tasks', { text: `Review: ${source.title || source.excerpt}`, source_context: source }),
+        onclick: () => save('task', '/api/tasks', {
+          text: source.moment_date
+            ? `Prepare ${source.title || 'enrollment moment'} for ${source.moment_date}`
+            : `Review: ${source.title || source.excerpt}`,
+          source_context: source,
+        }),
       }),
       el('button', {
         class: 'btn',

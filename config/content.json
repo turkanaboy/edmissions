@@ -83,6 +83,85 @@
       "cta": "Request one decision, contribution, or follow-up with a clear owner."
     }
   ],
+  "enrollmentMoments": [
+    {
+      "seed_key": "fall-2026-deposit-deadline",
+      "name": "Fall 2026 admission and housing deposits",
+      "moment_date": "2026-05-01",
+      "audience": "Accepted students and families",
+      "lead_days": 21,
+      "channels": ["email", "sms"],
+      "notes": "National Decision Day and SUNY Delhi's published admission and housing deposit deadline.",
+      "source_url": "https://www.delhi.edu/admission/financial-aid/deadlines/",
+      "verified_at": "2026-07-30"
+    },
+    {
+      "seed_key": "fall-2026-billing-statements",
+      "name": "Fall 2026 billing statements available",
+      "moment_date": "2026-07-06",
+      "audience": "Deposited and current students",
+      "lead_days": 7,
+      "channels": ["email", "web"],
+      "notes": "Online billing statements and payment-plan registration become available in Bronco Web.",
+      "source_url": "https://www.delhi.edu/admission/financial-aid/deadlines/",
+      "verified_at": "2026-07-30"
+    },
+    {
+      "seed_key": "fall-2026-billing-deadline",
+      "name": "Fall 2026 billing deadline",
+      "moment_date": "2026-08-21",
+      "audience": "Deposited and current students and families",
+      "lead_days": 21,
+      "channels": ["email", "sms", "web"],
+      "notes": "Fall balances are due; students should pay or have an approved payment plan.",
+      "source_url": "https://www.delhi.edu/mydelhi-students/student-accounts/billing/",
+      "verified_at": "2026-07-30"
+    },
+    {
+      "seed_key": "fall-2026-welcome-week",
+      "name": "Fall 2026 Welcome Week begins",
+      "moment_date": "2026-08-25",
+      "audience": "New incoming undergraduate students and families",
+      "lead_days": 14,
+      "channels": ["email", "sms", "web"],
+      "notes": "Welcome Week runs August 25–30 and is required for new incoming undergraduates, including commuters and transfers.",
+      "source_url": "https://www.delhi.edu/admission/accepted/welcome-week/index.php",
+      "verified_at": "2026-07-30"
+    },
+    {
+      "seed_key": "fall-2026-classes-start",
+      "name": "Fall 2026 full-term classes begin",
+      "moment_date": "2026-08-31",
+      "audience": "Deposited and current students",
+      "lead_days": 14,
+      "channels": ["email", "sms", "web"],
+      "notes": "The official Fall 2026 calendar lists August 31 as the full-term class start.",
+      "source_url": "https://www.delhi.edu/academic-calendar/2026_FALL_Corrected.pdf",
+      "verified_at": "2026-07-30"
+    },
+    {
+      "seed_key": "fall-2026-excelsior-deadline",
+      "name": "Fall 2026 Excelsior application deadline",
+      "moment_date": "2026-08-31",
+      "audience": "New applicants who may qualify for Excelsior",
+      "lead_days": 21,
+      "channels": ["email", "sms"],
+      "notes": "New Fall 2026 applicants must apply by the published deadline; eligibility must be verified through HESC.",
+      "source_url": "https://www.delhi.edu/admission/financial-aid/announcements.php",
+      "verified_at": "2026-07-30"
+    },
+    {
+      "seed_key": "fafsa-2027-28-opens",
+      "name": "2027–28 FAFSA and NYS aid applications open",
+      "moment_date": "2026-10-01",
+      "audience": "Prospective and current students and families",
+      "lead_days": 30,
+      "channels": ["email", "sms", "social", "web"],
+      "notes": "SUNY Delhi's financial-aid dates page identifies October 1 as the application opening date.",
+      "source_url": "https://www.delhi.edu/admission/financial-aid/deadlines/",
+      "verified_at": "2026-07-30"
+    }
+  ],
   "defaultCampus": {
     "name": "SUNY Delhi",
     "type": "Public SUNY college of technology",

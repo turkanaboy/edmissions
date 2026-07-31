@@ -71,6 +71,7 @@ import { init as initNotes } from './notes.js';
 import { init as initCampaigns } from './campaigns.js';
 import { init as initTasks } from './tasks.js';
 import { init as initWorkbench } from './workbench.js';
+import { init as initMoments } from './moments.js';
 
 document.getElementById('logout')?.addEventListener('click', async () => {
   await api('/api/logout', { method: 'POST' }).catch(() => {});
@@ -120,3 +121,4 @@ initNotes();
 initCampaigns();
 initTasks();
 initWorkbench();
+initMoments();

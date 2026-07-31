@@ -15,5 +15,23 @@ export const normalizeResearchSource = (response) => clean({
   excerpt: response.answer,
 });
 
+export const normalizeMomentSource = (moment) => clean({
+  title: moment.name,
+  moment_date: moment.moment_date,
+  audience: moment.audience,
+  excerpt: moment.notes,
+  url: moment.source_url,
+  published_at: moment.verified_at,
+  lane: 'campus',
+});
+
 export const sourceBody = (source) =>
-  [source.title, source.publisher, source.published_at, source.url, source.excerpt].filter(Boolean).join('\n');
+  [
+    source.title,
+    source.moment_date ? `Date: ${source.moment_date}` : '',
+    source.audience ? `Audience: ${source.audience}` : '',
+    source.publisher,
+    source.published_at,
+    source.url,
+    source.excerpt,
+  ].filter(Boolean).join('\n');

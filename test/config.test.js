@@ -40,6 +40,8 @@ test('content config loads modes, feeds, keywords, subjects', () => {
     'current-students',
     'campus-partners',
   ]);
+  assert.ok(c.content.enrollmentMoments.every((moment) => /^\d{4}-\d{2}-\d{2}$/.test(moment.moment_date)));
+  assert.ok(c.content.enrollmentMoments.every((moment) => moment.source_url.startsWith('https://www.delhi.edu/')));
 });
 
 test('env vars all carry the EDMISSIONS_ prefix (defaults applied)', () => {

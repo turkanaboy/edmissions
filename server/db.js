@@ -91,6 +91,26 @@ export function openDb(dataDir) {
       error TEXT NOT NULL DEFAULT '',
       checked_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS enrollment_moments (
+      id INTEGER PRIMARY KEY,
+      seed_key TEXT UNIQUE,
+      name TEXT NOT NULL,
+      moment_date TEXT NOT NULL,
+      audience TEXT NOT NULL DEFAULT '',
+      lead_days INTEGER NOT NULL DEFAULT 0,
+      channels TEXT NOT NULL DEFAULT '[]',
+      notes TEXT NOT NULL DEFAULT '',
+      source_url TEXT NOT NULL DEFAULT '',
+      verified_at TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS app_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
   const addColumns = (table, additions) => {
     const columns = new Set(db.prepare(`PRAGMA table_info(${table})`).all().map((column) => column.name));

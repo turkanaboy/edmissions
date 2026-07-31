@@ -93,6 +93,8 @@ document.addEventListener('edm:prefill-campaign', (event) => {
   const source = event.detail;
   state.form.source_context = { ...source };
   if (!state.form.purpose) state.form.purpose = source.title || source.excerpt || '';
+  if (!state.form.audience && source.audience) state.form.audience = source.audience;
+  if (!state.form.deadline && source.moment_date) state.form.deadline = source.moment_date;
   state.viewing = null;
   state.settings = null;
   render();

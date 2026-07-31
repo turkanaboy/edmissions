@@ -8,9 +8,11 @@ const SOURCE_FIELDS = new Map([
   ['url', 2000],
   ['excerpt', 4000],
   ['lane', 80],
+  ['moment_date', 80],
+  ['audience', 500],
 ]);
 
-const isWebUrl = (value) => {
+export const isWebUrl = (value) => {
   try {
     return ['http:', 'https:'].includes(new URL(value).protocol);
   } catch {
@@ -18,7 +20,7 @@ const isWebUrl = (value) => {
   }
 };
 
-const isDate = (value) => {
+export const isDate = (value) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00Z`);
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;

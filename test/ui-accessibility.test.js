@@ -13,6 +13,7 @@ const player = read('public/js/player.js');
 const tasks = read('public/js/tasks.js');
 const campaigns = read('public/js/campaigns.js');
 const workbench = read('public/js/workbench.js');
+const moments = read('public/js/moments.js');
 const visualizer = read('public/js/visualizer.js');
 const css = read('public/css/app.css');
 
@@ -98,6 +99,23 @@ test('Campaign Studio exposes editable Audience Lane guidance without resetting 
   assert.match(campaigns, /f\.audience_lane = e\.target\.value/);
   assert.doesNotMatch(campaigns, /f\.purpose\s*=.*audience_lane/);
   assert.doesNotMatch(campaigns, /f\.cta\s*=.*audience_lane/);
+});
+
+test('Enrollment Moments has labeled native editing and separate past visibility', () => {
+  assert.match(index, /id="moments-root"/);
+  for (const label of ['Moment name', 'Date', 'Audience', 'Lead days', 'Channels', 'Source URL', 'Verified on', 'Notes']) {
+    assert.match(moments, new RegExp(`field\\('${label}'`));
+  }
+  assert.match(moments, /type: 'date'/);
+  assert.match(moments, /type: 'number'/);
+  assert.match(moments, /Show past moments/);
+  assert.match(moments, /normalizeMomentSource/);
+});
+
+test('moment handoffs only fill empty campaign audience and deadline fields', () => {
+  assert.match(campaigns, /if \(!state\.form\.audience && source\.audience\)/);
+  assert.match(campaigns, /if \(!state\.form\.deadline && source\.moment_date\)/);
+  assert.match(workbench, /source\.moment_date.*Prepare/s);
 });
 
 test('mobile targets, theme colors, and reduced motion remain centralized', () => {
