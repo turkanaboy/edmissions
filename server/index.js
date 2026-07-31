@@ -12,6 +12,7 @@ import { taskRoutes } from './routes/tasks.js';
 import { aiRoutes } from './routes/ai.js';
 import { briefAssemblyRoutes, briefRoutes } from './routes/briefs.js';
 import { momentRoutes, seedMoments } from './routes/moments.js';
+import { dataRoutes } from './routes/data.js';
 import { createAi } from './openai.js';
 import { startPolling } from './poller.js';
 
@@ -65,6 +66,7 @@ export function createApp(config = loadConfig()) {
   app.use('/api/brief-selections', briefRoutes());
   app.use('/api/brief', briefAssemblyRoutes());
   app.use('/api/moments', momentRoutes());
+  app.use('/api/data', dataRoutes());
   app.use('/api', aiRoutes());
 
   app.use(express.static(path.join(__dirname, '..', 'public')));

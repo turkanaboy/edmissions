@@ -15,6 +15,7 @@ const campaigns = read('public/js/campaigns.js');
 const workbench = read('public/js/workbench.js');
 const moments = read('public/js/moments.js');
 const brief = read('public/js/brief.js');
+const data = read('public/js/data.js');
 const poller = read('server/poller.js');
 const visualizer = read('public/js/visualizer.js');
 const css = read('public/css/app.css');
@@ -130,9 +131,20 @@ test('AVP Brief is manual, removable, copyable, and printable without external s
   assert.doesNotMatch(poller, /brief/i);
 });
 
+test('Data Command Center labels aggregate imports and routes metrics through Use This', () => {
+  assert.match(index, /id="data-root"/);
+  for (const label of ['Snapshot label', 'As-of date', 'Source label', 'Aggregate CSV file']) {
+    assert.match(data, new RegExp(`field\\('${label}'`));
+  }
+  assert.match(data, /type: 'file'/);
+  assert.match(data, /Never upload names, IDs, emails, birth dates, or addresses/);
+  assert.match(data, /openWorkbench\(card\.source_context/);
+  assert.match(data, /Refresh official data/);
+});
+
 test('print CSS isolates the AVP Brief from dashboard controls', () => {
   assert.match(css, /@media print/);
-  for (const selector of ['.topbar', '.player-bar', '.grid', '#panel-moments', '.workbench-dialog', '.brief-controls']) {
+  for (const selector of ['.topbar', '.player-bar', '.grid', '#panel-moments', '#panel-data', '.workbench-dialog', '.brief-controls']) {
     assert.match(css, new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
   assert.match(css, /#panel-brief/);

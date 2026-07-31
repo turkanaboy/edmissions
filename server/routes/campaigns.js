@@ -10,6 +10,15 @@ const SOURCE_FIELDS = new Map([
   ['lane', 80],
   ['moment_date', 80],
   ['audience', 500],
+  ['dataset', 300],
+  ['measure', 300],
+  ['geography', 300],
+  ['as_of', 100],
+  ['institution', 300],
+  ['term', 100],
+  ['dimensions', 1000],
+  ['year', 20],
+  ['source_label', 300],
 ]);
 
 export const isWebUrl = (value) => {

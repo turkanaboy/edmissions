@@ -7,6 +7,7 @@ export function openDb(dataDir) {
   const db = new DatabaseSync(join(dataDir, 'edmissions.db'));
   db.exec(`
     PRAGMA journal_mode = WAL;
+    PRAGMA foreign_keys = ON;
 
     CREATE TABLE IF NOT EXISTS articles (
       id INTEGER PRIMARY KEY,
@@ -110,6 +111,35 @@ export function openDb(dataDir) {
     CREATE TABLE IF NOT EXISTS app_meta (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS data_snapshots (
+      id INTEGER PRIMARY KEY,
+      kind TEXT NOT NULL CHECK (kind IN ('slate', 'suny_enrollment')),
+      label TEXT NOT NULL,
+      as_of TEXT NOT NULL,
+      source_label TEXT NOT NULL,
+      source_url TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'fresh' CHECK (status IN ('fresh', 'stale')),
+      refreshed_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS data_points (
+      id INTEGER PRIMARY KEY,
+      snapshot_id INTEGER NOT NULL REFERENCES data_snapshots(id) ON DELETE CASCADE,
+      term TEXT NOT NULL DEFAULT '',
+      stage TEXT NOT NULL DEFAULT '',
+      program TEXT NOT NULL DEFAULT '',
+      residency TEXT NOT NULL DEFAULT '',
+      geography TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL DEFAULT '',
+      count INTEGER NOT NULL CHECK (count >= 0),
+      prior_year_count INTEGER CHECK (prior_year_count >= 0),
+      goal INTEGER CHECK (goal >= 0),
+      year INTEGER,
+      institution TEXT NOT NULL DEFAULT '',
+      measure TEXT NOT NULL DEFAULT ''
     );
   `);
   const addColumns = (table, additions) => {

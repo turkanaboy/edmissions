@@ -37,6 +37,24 @@ hidden and everything else works. AI requests use the Responses API with
 SUNY Delhi campus knowledge is seeded from approved official pages and reused in
 campaigns and research answers.
 
+### Data Command Center
+
+The dashboard can import aggregate Slate snapshots and refresh a cached SUNY
+Delhi enrollment trend from New York Open Data. Slate CSV files must be 200 KB
+or smaller and contain exactly these columns:
+
+```csv
+term,stage,program,residency,geography,source,count,prior_year_count,goal
+Fall 2026,Applicant,Nursing,In-state,New York,Web,120,108,140
+```
+
+`count` is required. `prior_year_count` and `goal` may be blank; all other
+fields are required. Imports with identity-bearing or unexpected columns are
+rejected before any snapshot is stored. Raw CSV text is discarded after
+validation; only normalized aggregate rows and snapshot metadata are retained.
+SUNY refreshes are manual, cached for 24 hours, and keep the last good snapshot
+when the official source is unavailable.
+
 ## The modes
 
 | Mode | Music | Visuals |
