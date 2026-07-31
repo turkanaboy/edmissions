@@ -24,7 +24,7 @@ export function loadConfig(env = process.env) {
     dataDir: env.EDMISSIONS_DATA_DIR || 'data',
     musicDir: env.EDMISSIONS_MUSIC_DIR || 'data/music',
     jamendoClientId: env.EDMISSIONS_JAMENDO_CLIENT_ID || '',
-    anthropicKey: env.EDMISSIONS_ANTHROPIC_KEY || '',
+    openAiKey: env.EDMISSIONS_OPENAPI_KEY || '',
     pollMinutes: Number(env.EDMISSIONS_FEED_POLL_MINUTES || 20),
     trustProxy: env.EDMISSIONS_TRUST_PROXY === '1' || env.EDMISSIONS_TRUST_PROXY === 'true',
     content,

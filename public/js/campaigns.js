@@ -135,7 +135,7 @@ function campusView() {
     el('div', { class: 'form-grid' }, input('type', 'Institution type'), input('location', 'Location')),
     input('audience', 'Priority audiences', { area: true }),
     input('voice', 'Brand voice', { area: true }),
-    input('facts', 'Approved facts and proof points', { area: true, rows: '5', hint: 'Programs, costs, outcomes, deadlines, support services, and other facts the writer may safely use.' }),
+    input('facts', 'Approved facts and proof points', { area: true, rows: '12', hint: 'Programs, costs, outcomes, deadlines, support services, source links, and other facts the writer may safely use.' }),
     state.error ? el('p', { class: 'error', role: 'alert', text: state.error }) : null,
     el('div', { class: 'row' },
       el('button', { class: 'btn btn-neon', text: state.busy === 'campus' ? 'Saving…' : 'Save campus memory', disabled: state.busy ? '' : undefined, onclick: () => saveCampus(campus) }),

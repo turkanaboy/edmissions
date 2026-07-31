@@ -76,12 +76,21 @@ test('template round-trip: create, list, update', async () => {
   }
 });
 
-test('campus memory is seeded, editable, and included in handoff briefs', async () => {
-  const { server, base } = bootApp();
+test('SUNY Delhi campus memory is seeded, editable, and included in handoff briefs', async () => {
+  const { server, base, app, config } = bootApp();
   try {
     const s = await login(base);
     const seeded = await (await s.get('/api/campaigns/campus')).json();
-    assert.equal(seeded.campus.name, 'Example Technical College');
+    assert.equal(seeded.campus.name, 'SUNY Delhi');
+    assert.match(seeded.campus.facts, /Verified from official SUNY Delhi pages on 2026-07-30/);
+    assert.match(seeded.campus.facts, /https:\/\/www\.delhi\.edu\/academics\/majors-programs\//);
+
+    app.locals.db
+      .prepare('UPDATE campus_profile SET name = ?, facts = ? WHERE id = 1')
+      .run('Example Technical College', 'Replace this seed with approved facts.');
+    const { seedTemplates } = await import('../server/routes/campaigns.js');
+    seedTemplates(app.locals.db, config);
+    assert.equal((await (await s.get('/api/campaigns/campus')).json()).campus.name, 'SUNY Delhi');
 
     const campus = {
       name: 'North Country Technical College',
@@ -92,6 +101,8 @@ test('campus memory is seeded, editable, and included in handoff briefs', async 
       facts: 'Offers evening programs and career coaching.',
     };
     assert.equal((await (await s.put('/api/campaigns/campus', campus)).json()).name, campus.name);
+    seedTemplates(app.locals.db, config);
+    assert.equal((await (await s.get('/api/campaigns/campus')).json()).campus.name, campus.name);
     const brief = await (await s.post('/api/campaigns/brief', FORM)).json();
     assert.match(brief.output, /North Country Technical College/);
     assert.match(brief.output, /Offers evening programs/);

@@ -36,5 +36,5 @@ test('env vars all carry the EDMISSIONS_ prefix (defaults applied)', () => {
   assert.equal(c.port, 3000);
   assert.equal(c.pollMinutes, 20);
   assert.equal(c.trustProxy, false);
-  assert.equal(c.anthropicKey, '');
+  assert.equal(c.openAiKey, '');
 });

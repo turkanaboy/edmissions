@@ -30,10 +30,12 @@ the player falls back to the local folder automatically.
 
 ### Add AI (research chat, summaries + campaigns)
 
-Set `EDMISSIONS_ANTHROPIC_KEY` (an Anthropic API key) and restart. Research chat,
+Set `EDMISSIONS_OPENAPI_KEY` (an OpenAI API key) and restart. Research chat,
 summaries, and text/HTML campaign writing appear; without the key those controls stay
-hidden and everything else works. Costs are negligible at this scale (Haiku,
-capped output).
+hidden and everything else works. AI requests use the Responses API with
+`gpt-5.6-luna`, high reasoning effort, capped output, and response storage disabled.
+SUNY Delhi campus knowledge is seeded from approved official pages and reused in
+campaigns and research answers.
 
 ## The modes
 
@@ -101,7 +103,7 @@ npm test
 ```
 
 Node's built-in test runner; no live network calls (Jamendo, feeds, and
-Anthropic are all stubbed).
+OpenAI are all stubbed).
 
 ## Env reference
 

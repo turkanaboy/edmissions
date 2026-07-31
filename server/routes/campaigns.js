@@ -10,9 +10,21 @@ export function seedTemplates(db, config) {
   }
   const campus = config.content.defaultCampus;
   if (campus) {
-    db.prepare(
-      'INSERT OR IGNORE INTO campus_profile (id, name, type, location, audience, voice, facts) VALUES (1, ?, ?, ?, ?, ?, ?)'
-    ).run(campus.name, campus.type, campus.location, campus.audience, campus.voice, campus.facts);
+    const existing = db.prepare('SELECT name, facts FROM campus_profile WHERE id = 1').get();
+    const values = [campus.name, campus.type, campus.location, campus.audience, campus.voice, campus.facts];
+    if (!existing) {
+      db.prepare(
+        'INSERT INTO campus_profile (id, name, type, location, audience, voice, facts) VALUES (1, ?, ?, ?, ?, ?, ?)'
+      ).run(...values);
+    } else if (
+      existing.name === 'Example Technical College' &&
+      existing.facts.startsWith('Replace this seed')
+    ) {
+      // Upgrade only the original placeholder; preserve any campus memory the user edited.
+      db.prepare(
+        'UPDATE campus_profile SET name = ?, type = ?, location = ?, audience = ?, voice = ?, facts = ? WHERE id = 1'
+      ).run(...values);
+    }
   }
 }
 
@@ -48,12 +60,15 @@ export function pickTemplate(db, templateId) {
     : db.prepare('SELECT * FROM campaign_templates ORDER BY id LIMIT 1').get();
 }
 
-export function campaignFields(db, fields) {
+export function campusContext(db) {
   const campus = db.prepare('SELECT * FROM campus_profile WHERE id = 1').get();
-  const campusText = campus
+  return campus
     ? `Name: ${campus.name}\nType: ${campus.type}\nLocation: ${campus.location}\nAudience: ${campus.audience}\nVoice: ${campus.voice}\nApproved facts: ${campus.facts}`
     : 'No campus profile supplied.';
-  return { ...fields, campus: campusText };
+}
+
+export function campaignFields(db, fields) {
+  return { ...fields, campus: campusContext(db) };
 }
 
 export function campaignRoutes() {

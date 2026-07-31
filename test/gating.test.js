@@ -32,7 +32,7 @@ test('AE1: without a key, capabilities is ai:false and AI endpoints 503', async 
 });
 
 test('AE2: with a key, capabilities is ai:true (both campaign paths available)', async () => {
-  const { server, base } = bootApp({ EDMISSIONS_ANTHROPIC_KEY: 'test-key' });
+  const { server, base } = bootApp({ EDMISSIONS_OPENAPI_KEY: 'test-key' });
   try {
     const s = await login(base);
     assert.equal((await (await s.get('/api/capabilities')).json()).ai, true);
@@ -44,7 +44,7 @@ test('AE2: with a key, capabilities is ai:true (both campaign paths available)',
 });
 
 test('summarize stores the summary while raw body stays unchanged (R14)', async () => {
-  const { server, base, app } = bootApp({ EDMISSIONS_ANTHROPIC_KEY: 'test-key' });
+  const { server, base, app } = bootApp({ EDMISSIONS_OPENAPI_KEY: 'test-key' });
   app.locals.ai = stubAi;
   try {
     const s = await login(base);
@@ -60,7 +60,7 @@ test('summarize stores the summary while raw body stays unchanged (R14)', async 
 });
 
 test('generate persists a campaign with the requested message count', async () => {
-  const { server, base, app } = bootApp({ EDMISSIONS_ANTHROPIC_KEY: 'test-key' });
+  const { server, base, app } = bootApp({ EDMISSIONS_OPENAPI_KEY: 'test-key' });
   app.locals.ai = stubAi;
   try {
     const s = await login(base);
@@ -81,12 +81,14 @@ test('generate persists a campaign with the requested message count', async () =
 });
 
 test('HTML campaigns use the saved scaffold and research answers can be saved as notes', async () => {
-  const { server, base, app } = bootApp({ EDMISSIONS_ANTHROPIC_KEY: 'test-key' });
+  const { server, base, app } = bootApp({ EDMISSIONS_OPENAPI_KEY: 'test-key' });
   let receivedHistory;
+  let receivedCampus;
   app.locals.ai = {
     ...stubAi,
-    researchAnswer: async (question, history) => {
+    researchAnswer: async (question, history, campus) => {
       receivedHistory = history;
+      receivedCampus = campus;
       return `Try an employer open house for: ${question}`;
     },
   };
@@ -108,6 +110,8 @@ test('HTML campaigns use the saved scaffold and research answers can be saved as
     })).json();
     assert.match(research.answer, /employer open house/);
     assert.deepEqual(receivedHistory, history);
+    assert.match(receivedCampus, /Name: SUNY Delhi/);
+    assert.match(receivedCampus, /SUNY DELHI KNOWLEDGE PACK/);
     assert.equal((await s.post('/api/research/chat', {
       question: 'Too much history',
       history: Array(6).fill(history[0]),
@@ -120,7 +124,7 @@ test('HTML campaigns use the saved scaffold and research answers can be saved as
 });
 
 test('AI failures return 502 without leaking detail', async () => {
-  const { server, base, app } = bootApp({ EDMISSIONS_ANTHROPIC_KEY: 'test-key' });
+  const { server, base, app } = bootApp({ EDMISSIONS_OPENAPI_KEY: 'test-key' });
   app.locals.ai = {
     enabled: true,
     summarizeNote: async () => {

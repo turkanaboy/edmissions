@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { campaignFields, pickTemplate, renderTemplate, validateCampaignInput } from './campaigns.js';
+import { campaignFields, campusContext, pickTemplate, renderTemplate, validateCampaignInput } from './campaigns.js';
 import { NOTE_JOIN, parseNote } from './notes.js';
 
 // Errors are logged as metadata only — never the note or campaign text (it can carry
@@ -53,7 +53,13 @@ export function aiRoutes() {
       return res.status(400).json({ error: 'Research history is invalid' });
     }
     try {
-      res.json({ answer: await req.app.locals.ai.researchAnswer(question, cleanHistory) });
+      res.json({
+        answer: await req.app.locals.ai.researchAnswer(
+          question,
+          cleanHistory,
+          campusContext(req.app.locals.db)
+        ),
+      });
     } catch (err) {
       logAiError('research chat', null, err);
       res.status(502).json({ error: 'AI request failed — try again' });

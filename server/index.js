@@ -10,7 +10,7 @@ import { notesRoutes } from './routes/notes.js';
 import { campaignRoutes, seedTemplates } from './routes/campaigns.js';
 import { taskRoutes } from './routes/tasks.js';
 import { aiRoutes } from './routes/ai.js';
-import { createAi } from './anthropic.js';
+import { createAi } from './openai.js';
 import { startPolling } from './poller.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -47,7 +47,7 @@ export function createApp(config = loadConfig()) {
 
   app.get('/api/capabilities', (req, res) =>
     res.json({
-      ai: Boolean(config.anthropicKey),
+      ai: Boolean(config.openAiKey),
       subjects: config.content.subjects,
       welcome: req.user.toLowerCase() === 'nazely' ? 'Welcome AVP Nazely' : '',
     })
