@@ -62,7 +62,7 @@ if (themeColor && backgroundColor) themeColor.content = backgroundColor;
 
 // Mutable so panel modules can import the binding safely during the import cycle;
 // populated below before any panel init runs.
-export const capabilities = { ai: false, subjects: [] };
+export const capabilities = { ai: false, subjects: [], audienceLanes: [] };
 
 import { init as initPlayer } from './player.js';
 import './visualizer.js'; // event-driven; no init needed

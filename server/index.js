@@ -50,6 +50,7 @@ export function createApp(config = loadConfig()) {
     res.json({
       ai: Boolean(config.openAiKey),
       subjects: config.content.subjects,
+      audienceLanes: config.content.audienceLanes || [],
       welcome: req.user.toLowerCase() === 'nazely' ? 'Welcome AVP Nazely' : '',
     })
   );

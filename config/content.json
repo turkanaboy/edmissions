@@ -17,6 +17,72 @@
     "demographic cliff", "retention", "transfer", "test-optional"
   ],
   "subjects": ["admissions", "financial aid", "student records", "housing", "orientation", "HR"],
+  "audienceLanes": [
+    {
+      "id": "prospective-students",
+      "label": "Prospective students",
+      "priorities": "Fit, career direction, affordability, and a clear path from interest to application.",
+      "tone": "Energetic, concrete, and exploratory without overselling.",
+      "proof": "Hands-on learning, program options, student support, visits, and verified outcomes.",
+      "cta": "Offer one low-friction next step such as exploring programs, visiting, or applying."
+    },
+    {
+      "id": "families",
+      "label": "Families",
+      "priorities": "Value, safety, support, affordability, and confidence in the student's next step.",
+      "tone": "Reassuring, transparent, and practical.",
+      "proof": "Costs and aid, support services, campus contacts, and qualified outcome evidence.",
+      "cta": "Invite a useful family action without taking agency away from the student."
+    },
+    {
+      "id": "counselors",
+      "label": "Counselors",
+      "priorities": "Accurate pathways, requirements, deadlines, and resources they can confidently share.",
+      "tone": "Concise, collegial, and information-forward.",
+      "proof": "Official program, admissions, cost, visit, and contact links.",
+      "cta": "Make the share, referral, or advising next step explicit."
+    },
+    {
+      "id": "adult-learners",
+      "label": "Adult learners",
+      "priorities": "Career momentum, flexible planning, affordability, credit for prior experience, and human support.",
+      "tone": "Direct, respectful, and free of assumptions about age or life circumstances.",
+      "proof": "Current modality, schedule, transfer, cost, and career information only when verified.",
+      "cta": "Offer a conversation or concrete planning step that respects competing responsibilities."
+    },
+    {
+      "id": "accepted-students",
+      "label": "Accepted students",
+      "priorities": "Belonging, decision confidence, affordability, and the next enrollment requirements.",
+      "tone": "Celebratory, specific, and calm about what comes next.",
+      "proof": "Official admitted-student steps, events, aid, housing, and support links.",
+      "cta": "Name the single next action and its verified deadline."
+    },
+    {
+      "id": "deposited-students",
+      "label": "Deposited students",
+      "priorities": "Momentum, readiness, connection, and preventing avoidable summer melt.",
+      "tone": "Warm, confident, and operationally clear.",
+      "proof": "Verified onboarding, orientation, records, billing, housing, and arrival guidance.",
+      "cta": "Focus on the next incomplete enrollment step without implying access to individual records."
+    },
+    {
+      "id": "current-students",
+      "label": "Current students",
+      "priorities": "Timely action, continuity, support, and progress toward the next term or milestone.",
+      "tone": "Straightforward, respectful, and student-centered.",
+      "proof": "Current official policy, service, academic, billing, and registration information.",
+      "cta": "Point to the correct office or verified self-service action."
+    },
+    {
+      "id": "campus-partners",
+      "label": "Campus partners",
+      "priorities": "Shared context, ownership, timing, and the specific help enrollment work needs.",
+      "tone": "Collaborative, candid, and action-oriented.",
+      "proof": "Approved institutional data, source links, decisions, and named operational dependencies.",
+      "cta": "Request one decision, contribution, or follow-up with a clear owner."
+    }
+  ],
   "defaultCampus": {
     "name": "SUNY Delhi",
     "type": "Public SUNY college of technology",

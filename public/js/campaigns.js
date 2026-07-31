@@ -19,6 +19,8 @@ const state = {
     message_count: 3,
     template_id: null,
     audience: '',
+    audience_lane: '',
+    audience_notes: '',
     sender: '',
     channel: '',
     deadline: '',
@@ -84,6 +86,8 @@ async function copyOutput() {
 }
 
 const currentTemplate = () => state.templates.find((t) => t.id === Number(state.form.template_id));
+const audienceLanes = () => capabilities.audienceLanes || [];
+const audienceLane = (id) => audienceLanes().find((lane) => lane.id === id);
 
 document.addEventListener('edm:prefill-campaign', (event) => {
   const source = event.detail;
@@ -173,6 +177,7 @@ function viewingView() {
       { class: 'campaign-context-summary' },
       ...[
         c.audience,
+        audienceLane(c.audience_lane)?.label,
         c.sender,
         c.channel ? c.channel.toUpperCase() : '',
         c.deadline,
@@ -181,6 +186,7 @@ function viewingView() {
         .filter(Boolean)
         .map((text) => el('span', { class: 'pill', text }))
     ),
+    c.audience_notes ? el('p', { class: 'muted audience-notes', text: c.audience_notes }) : null,
     el('textarea', { class: 'output-area', rows: '14', readonly: '', text: c.output }),
     preflightView(),
     state.error ? el('p', { class: 'error', role: 'alert', text: state.error }) : null,
@@ -252,7 +258,7 @@ function templateView() {
   return el(
     'div',
     { class: 'stack settings-pane' },
-    field('Writing instructions', el('textarea', { rows: '9', text: draft.body, oninput: (e) => (draft.body = e.target.value) }), 'Available: {{campus}}, {{purpose}}, {{cta}}, {{cta_link}}, {{message_count}}, {{audience}}, {{sender}}, {{channel}}, {{deadline}}, {{source}}'),
+    field('Writing instructions', el('textarea', { rows: '9', text: draft.body, oninput: (e) => (draft.body = e.target.value) }), 'Available: {{campus}}, {{purpose}}, {{cta}}, {{cta_link}}, {{message_count}}, {{audience}}, {{audience_lane}}, {{audience_notes}}, {{sender}}, {{channel}}, {{deadline}}, {{source}}'),
     field('Optional HTML message template', el('textarea', {
       class: 'code-input',
       rows: '9',
@@ -292,7 +298,23 @@ function formView() {
   if (state.settings === 'template') return templateView();
   const f = state.form;
   const template = currentTemplate();
+  const selectedLane = audienceLane(f.audience_lane);
   const source = f.source_context || (f.source_context = {});
+  const laneSelect = el(
+    'select',
+    {
+      onchange: (e) => {
+        f.audience_lane = e.target.value;
+        render();
+      },
+    },
+    ...[['', 'No lane selected'], ...audienceLanes().map((lane) => [lane.id, lane.label])]
+      .map(([value, label]) => {
+        const option = el('option', { value, text: label });
+        if (value === f.audience_lane) option.selected = true;
+        return option;
+      })
+  );
   const channel = el(
     'select',
     { onchange: (e) => (f.channel = e.target.value) },
@@ -317,6 +339,22 @@ function formView() {
       el('button', { class: 'btn btn-ghost', text: 'Edit campus', onclick: () => { state.settings = 'campus'; render(); } })
     ),
     field('Campaign purpose', el('input', { 'data-focus': 'campaign-purpose', placeholder: 'FAFSA completion push for admitted students', value: f.purpose, oninput: (e) => (f.purpose = e.target.value) })),
+    field('Audience Lane', laneSelect, 'Adds reusable guidance without changing your campaign fields.'),
+    selectedLane ? el('section', { class: 'audience-lane-preview', 'aria-label': `${selectedLane.label} guidance` },
+      el('strong', { text: selectedLane.label }),
+      el('p', { text: selectedLane.priorities }),
+      el('dl', {},
+        el('div', {}, el('dt', { text: 'Tone' }), el('dd', { text: selectedLane.tone })),
+        el('div', {}, el('dt', { text: 'Proof' }), el('dd', { text: selectedLane.proof })),
+        el('div', {}, el('dt', { text: 'CTA' }), el('dd', { text: selectedLane.cta }))
+      )
+    ) : null,
+    field('Audience notes', el('textarea', {
+      rows: '3',
+      placeholder: 'Optional context specific to this campaign',
+      text: f.audience_notes,
+      oninput: (e) => (f.audience_notes = e.target.value),
+    })),
     el('div', { class: 'form-grid' },
       field('Call to action', el('input', { placeholder: 'Complete your FAFSA', value: f.cta, oninput: (e) => (f.cta = e.target.value) })),
       field('CTA link', el('input', { type: 'url', placeholder: 'https://…', value: f.cta_link, oninput: (e) => (f.cta_link = e.target.value) }))

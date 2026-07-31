@@ -68,6 +68,8 @@ export function openDb(dataDir) {
       format TEXT NOT NULL DEFAULT 'text',
       output TEXT NOT NULL,
       audience TEXT NOT NULL DEFAULT '',
+      audience_lane TEXT NOT NULL DEFAULT '',
+      audience_notes TEXT NOT NULL DEFAULT '',
       sender TEXT NOT NULL DEFAULT '',
       channel TEXT NOT NULL DEFAULT '',
       deadline TEXT NOT NULL DEFAULT '',
@@ -106,6 +108,8 @@ export function openDb(dataDir) {
   addColumns('campaigns', {
     format: "TEXT NOT NULL DEFAULT 'text'",
     audience: "TEXT NOT NULL DEFAULT ''",
+    audience_lane: "TEXT NOT NULL DEFAULT ''",
+    audience_notes: "TEXT NOT NULL DEFAULT ''",
     sender: "TEXT NOT NULL DEFAULT ''",
     channel: "TEXT NOT NULL DEFAULT ''",
     deadline: "TEXT NOT NULL DEFAULT ''",

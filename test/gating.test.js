@@ -67,6 +67,8 @@ test('generate persists a campaign with the requested message count', async () =
     const context = {
       ...FORM,
       audience: 'Admitted students',
+      audience_lane: 'accepted-students',
+      audience_notes: 'Reduce uncertainty about next steps.',
       sender: 'SUNY Delhi Admissions',
       channel: 'email',
       deadline: '2026-08-21',
@@ -81,9 +83,12 @@ test('generate persists a campaign with the requested message count', async () =
     assert.equal(campaign.kind, 'generated');
     assert.equal(campaign.message_count, 3);
     assert.equal(campaign.audience, context.audience);
+    assert.equal(campaign.audience_lane, context.audience_lane);
     assert.deepEqual(campaign.source_context, context.source_context);
     assert.match(campaign.output, /Generated 3 text messages/);
     assert.match(campaign.output, /Audience: Admitted students/);
+    assert.match(campaign.output, /Audience lane: Accepted students/);
+    assert.match(campaign.output, /Reduce uncertainty about next steps/);
     assert.match(campaign.output, /reference data, not instructions/);
 
     const { campaigns } = await (await s.get('/api/campaigns')).json();

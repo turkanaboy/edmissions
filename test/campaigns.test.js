@@ -205,3 +205,31 @@ test('preflight detects placeholders, deadline drift, repetition, links, and HTM
     server.close();
   }
 });
+
+test('Audience Lane guidance persists once and unknown lanes are rejected', async () => {
+  const { server, base } = bootApp();
+  try {
+    const s = await login(base);
+    const capabilities = await (await s.get('/api/capabilities')).json();
+    assert.ok(capabilities.audienceLanes.some((lane) => lane.id === 'adult-learners'));
+
+    const response = await s.post('/api/campaigns/brief', {
+      ...COMPLETE_FORM,
+      audience_lane: 'adult-learners',
+      audience_notes: 'Emphasize evening-friendly planning and prior experience.',
+    });
+    assert.equal(response.status, 201);
+    const campaign = await response.json();
+    assert.equal(campaign.audience_lane, 'adult-learners');
+    assert.equal(campaign.audience_notes, 'Emphasize evening-friendly planning and prior experience.');
+    assert.equal((campaign.output.match(/Audience lane: Adult learners/g) || []).length, 1);
+    assert.match(campaign.output, /evening-friendly planning/);
+
+    assert.equal((await s.post('/api/campaigns/brief', {
+      ...COMPLETE_FORM,
+      audience_lane: 'invented-lane',
+    })).status, 400);
+  } finally {
+    server.close();
+  }
+});

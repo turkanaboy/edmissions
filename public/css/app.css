@@ -304,6 +304,14 @@ button.pill { appearance: none; background: transparent; cursor: pointer; }
 .campaign-memory span { color: var(--dim); font-size: 0.71rem; }
 .campaign-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; }
 .campaign-context-summary { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.audience-notes { margin: 0; font-size: 0.76rem; }
+.audience-lane-preview { display: grid; gap: 0.35rem; padding: 0.75rem; background: linear-gradient(135deg, oklch(0.7 0.25 305 / 0.1), oklch(0.74 0.16 208 / 0.05)); border: 1px solid var(--hairline); border-radius: 10px; }
+.audience-lane-preview > strong { color: var(--purple-bright); font-size: 0.82rem; }
+.audience-lane-preview > p { margin: 0; color: var(--dim); font-size: 0.76rem; }
+.audience-lane-preview dl { display: grid; gap: 0.3rem; margin: 0; }
+.audience-lane-preview dl div { display: grid; grid-template-columns: 3.3rem 1fr; gap: 0.45rem; }
+.audience-lane-preview dt { color: var(--cyan); font-size: 0.69rem; font-weight: 700; text-transform: uppercase; }
+.audience-lane-preview dd { margin: 0; color: var(--dim); font-size: 0.72rem; }
 .preflight { padding: 0.78rem; border: 1px solid var(--hairline); border-radius: 10px; background: oklch(0.2 0.055 300 / 0.7); }
 .preflight-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
 .preflight-title div { display: flex; flex-direction: column; }

@@ -92,6 +92,14 @@ test('feed exposes lane filters, source status, and Use This actions', () => {
   assert.match(feed, /Source refresh issues/);
 });
 
+test('Campaign Studio exposes editable Audience Lane guidance without resetting core fields', () => {
+  assert.match(campaigns, /Audience Lane/);
+  assert.match(campaigns, /Audience notes/);
+  assert.match(campaigns, /f\.audience_lane = e\.target\.value/);
+  assert.doesNotMatch(campaigns, /f\.purpose\s*=.*audience_lane/);
+  assert.doesNotMatch(campaigns, /f\.cta\s*=.*audience_lane/);
+});
+
 test('mobile targets, theme colors, and reduced motion remain centralized', () => {
   assert.match(css, /--star:/);
   assert.match(css, /--viz-trail-full:/);

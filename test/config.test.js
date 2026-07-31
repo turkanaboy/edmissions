@@ -30,6 +30,16 @@ test('content config loads modes, feeds, keywords, subjects', () => {
   assert.deepEqual(new Set(c.content.feeds.map((feed) => feed.lane)), new Set(['campus', 'local', 'suny', 'national']));
   assert.ok(c.content.keywords.includes('fafsa'));
   assert.ok(c.content.subjects.includes('admissions'));
+  assert.deepEqual(c.content.audienceLanes.map((lane) => lane.id), [
+    'prospective-students',
+    'families',
+    'counselors',
+    'adult-learners',
+    'accepted-students',
+    'deposited-students',
+    'current-students',
+    'campus-partners',
+  ]);
 });
 
 test('env vars all carry the EDMISSIONS_ prefix (defaults applied)', () => {
