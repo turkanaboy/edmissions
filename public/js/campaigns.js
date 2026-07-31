@@ -85,6 +85,15 @@ async function copyOutput() {
 
 const currentTemplate = () => state.templates.find((t) => t.id === Number(state.form.template_id));
 
+document.addEventListener('edm:prefill-campaign', (event) => {
+  const source = event.detail;
+  state.form.source_context = { ...source };
+  if (!state.form.purpose) state.form.purpose = source.title || source.excerpt || '';
+  state.viewing = null;
+  state.settings = null;
+  render();
+});
+
 async function loadPreflight(id) {
   try {
     state.preflight = await api(`/api/campaigns/${id}/preflight`);
@@ -307,7 +316,7 @@ function formView() {
       el('div', {}, el('strong', { text: state.campus?.name || 'Campus memory' }), el('span', { text: state.campus?.location || 'Add campus context' })),
       el('button', { class: 'btn btn-ghost', text: 'Edit campus', onclick: () => { state.settings = 'campus'; render(); } })
     ),
-    field('Campaign purpose', el('input', { placeholder: 'FAFSA completion push for admitted students', value: f.purpose, oninput: (e) => (f.purpose = e.target.value) })),
+    field('Campaign purpose', el('input', { 'data-focus': 'campaign-purpose', placeholder: 'FAFSA completion push for admitted students', value: f.purpose, oninput: (e) => (f.purpose = e.target.value) })),
     el('div', { class: 'form-grid' },
       field('Call to action', el('input', { placeholder: 'Complete your FAFSA', value: f.cta, oninput: (e) => (f.cta = e.target.value) })),
       field('CTA link', el('input', { type: 'url', placeholder: 'https://…', value: f.cta_link, oninput: (e) => (f.cta_link = e.target.value) }))

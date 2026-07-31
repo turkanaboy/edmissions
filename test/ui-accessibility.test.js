@@ -12,6 +12,7 @@ const feed = read('public/js/feed.js');
 const player = read('public/js/player.js');
 const tasks = read('public/js/tasks.js');
 const campaigns = read('public/js/campaigns.js');
+const workbench = read('public/js/workbench.js');
 const visualizer = read('public/js/visualizer.js');
 const css = read('public/css/app.css');
 
@@ -73,6 +74,22 @@ test('campaign preflight is labeled, non-blocking, and keeps HTML inert', () => 
   assert.match(campaigns, /Copy output/);
   assert.match(campaigns, /class: 'output-area'/);
   assert.doesNotMatch(campaigns, /innerHTML|srcdoc/);
+});
+
+test('Use This workbench is a native dialog with five explicit destinations', () => {
+  assert.match(index, /<dialog[^>]+id="use-this-dialog"/);
+  assert.match(workbench, /aria-labelledby/);
+  for (const label of ['Start campaign', 'Ask research', 'Save to notes', 'Create task', 'Add to AVP Brief']) {
+    assert.match(workbench, new RegExp(label));
+  }
+  assert.match(workbench, /addEventListener\('close'/);
+  assert.match(workbench, /invoker\?\.focus/);
+});
+
+test('feed exposes lane filters, source status, and Use This actions', () => {
+  assert.match(feed, /campus.*local.*suny.*national/s);
+  assert.match(feed, /Use this/);
+  assert.match(feed, /Source refresh issues/);
 });
 
 test('mobile targets, theme colors, and reduced motion remain centralized', () => {

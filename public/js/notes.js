@@ -6,6 +6,8 @@ import {
   markResponseSaved,
   recentResearchHistory,
 } from './research-chat-state.js';
+import { openWorkbench } from './workbench.js';
+import { normalizeResearchSource } from './source-context.js';
 
 const root = document.getElementById('notes-root');
 const state = { notes: [], filterTag: null, editing: null, busy: false, error: null, question: '', chat: [] };
@@ -25,7 +27,7 @@ async function saveEditing() {
   state.busy = true;
   render('note-save');
   try {
-    const payload = { body: n.body, tags: n.tags, article_id: n.article_id || null };
+    const payload = { body: n.body, tags: n.tags, article_id: n.article_id || null, source_context: n.source_context || {} };
     const saved = n.id ? await api(`/api/notes/${n.id}`, { method: 'PUT', body: JSON.stringify(payload) }) : await api('/api/notes', { method: 'POST', body: JSON.stringify(payload) });
     state.editing = null;
     state.busy = false;
@@ -133,6 +135,20 @@ document.addEventListener('edm:add-to-note', async (e) => {
   if (!state.editing) state.editing = { ...saved };
   await load('new-note');
   announce('Article added to notes.');
+});
+
+document.addEventListener('edm:prefill-research', (event) => {
+  const source = event.detail;
+  const prompt = [
+    `What are the enrollment implications of "${source.title || 'this source'}"?`,
+    source.publisher ? `Publisher: ${source.publisher}` : '',
+    source.published_at ? `Published: ${source.published_at}` : '',
+    source.lane ? `Source lane: ${source.lane}` : '',
+    source.excerpt ? `Context: ${source.excerpt}` : '',
+    source.url ? `Source: ${source.url}` : '',
+  ].filter(Boolean).join('\n');
+  state.question = state.question ? `${state.question}\n\n${prompt}` : prompt;
+  render('research-question');
 });
 
 function editorView() {
@@ -257,6 +273,11 @@ function listView() {
                   state.chat = clearResponse(state.chat, item);
                   render('research-question');
                 },
+              }),
+              el('button', {
+                class: 'btn btn-ghost',
+                text: 'Use this',
+                onclick: (event) => openWorkbench(normalizeResearchSource(item), event.currentTarget),
               })
             )
           )),

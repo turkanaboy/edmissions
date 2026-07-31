@@ -39,13 +39,17 @@ export function normalizeSourceContext(value) {
   return source;
 }
 
+export function parseSourceContext(value) {
+  try {
+    return JSON.parse(value || '{}');
+  } catch {
+    return {};
+  }
+}
+
 export function campaignRecord(row) {
   if (!row) return null;
-  try {
-    return { ...row, source_context: JSON.parse(row.source_context || '{}') };
-  } catch {
-    return { ...row, source_context: {} };
-  }
+  return { ...row, source_context: parseSourceContext(row.source_context) };
 }
 
 export function seedTemplates(db, config) {

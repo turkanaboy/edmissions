@@ -70,6 +70,7 @@ import { init as initFeed } from './feed.js';
 import { init as initNotes } from './notes.js';
 import { init as initCampaigns } from './campaigns.js';
 import { init as initTasks } from './tasks.js';
+import { init as initWorkbench } from './workbench.js';
 
 document.getElementById('logout')?.addEventListener('click', async () => {
   await api('/api/logout', { method: 'POST' }).catch(() => {});
@@ -84,7 +85,11 @@ if (welcome && capabilities.welcome) {
 }
 
 const workspaceTabs = [...document.querySelectorAll('.workspace-tab')];
-const selectWorkspace = (selected) => {
+export const selectWorkspace = (name) => {
+  const selected = typeof name === 'string'
+    ? workspaceTabs.find((tab) => tab.id === `tab-${name}`)
+    : name;
+  if (!selected) return;
   workspaceTabs.forEach((tab) => {
     const active = tab === selected;
     tab.classList.toggle('active', active);
@@ -114,3 +119,4 @@ initFeed();
 initNotes();
 initCampaigns();
 initTasks();
+initWorkbench();

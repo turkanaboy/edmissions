@@ -25,8 +25,8 @@ const freshDb = () => openDb(mkdtempSync(join(tmpdir(), 'edm-poll-')));
 test('one failing source never blocks the others', async () => {
   const db = freshDb();
   const config = testConfig([
-    { name: 'Dead Feed', url: 'https://dead.example.com/rss' },
-    { name: 'Live Feed', url: 'https://live.example.com/rss' },
+    { name: 'Dead Feed', lane: 'local', url: 'https://dead.example.com/rss' },
+    { name: 'Live Feed', lane: 'campus', url: 'https://live.example.com/rss' },
   ]);
   const restore = stubFetch(
     (url) => url.includes('example.com'),
@@ -42,8 +42,11 @@ test('one failing source never blocks the others', async () => {
     assert.equal(r.failed[0].feed, 'Dead Feed');
     const rows = db.prepare('SELECT * FROM articles ORDER BY score DESC').all();
     assert.equal(rows.length, 2);
+    assert.ok(rows.every((row) => row.lane === 'campus'));
     assert.equal(rows[0].title, 'FAFSA delays reshape yield models');
     assert.ok(rows[0].score > rows[1].score);
+    const status = db.prepare('SELECT * FROM feed_status ORDER BY source').all();
+    assert.deepEqual(status.map((item) => [item.source, item.ok]), [['Dead Feed', 0], ['Live Feed', 1]]);
   } finally {
     restore();
     db.close();
@@ -118,6 +121,24 @@ test('stored articles carry excerpt only, never full text', async () => {
   }
 });
 
+test('a higher-priority duplicate upgrades its lane without losing its star', async () => {
+  const db = freshDb();
+  const national = testConfig([{ name: 'National', lane: 'national', url: 'https://national.example.com/rss' }]);
+  const campus = testConfig([{ name: 'SUNY Delhi', lane: 'campus', url: 'https://campus.example.com/rss' }]);
+  const restore = stubFetch((url) => url.includes('example.com'), () => new Response(RSS));
+  try {
+    await pollOnce(db, national);
+    db.prepare('UPDATE articles SET starred = 1 WHERE link = ?').run('https://ex.com/fafsa');
+    await pollOnce(db, campus);
+    const row = db.prepare('SELECT source, lane, starred FROM articles WHERE link = ?').get('https://ex.com/fafsa');
+    assert.deepEqual({ ...row }, { source: 'SUNY Delhi', lane: 'campus', starred: 1 });
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM articles').get().n, 2);
+  } finally {
+    restore();
+    db.close();
+  }
+});
+
 test('job headlines require both a VP variation and enrollment', () => {
   assert.equal(keepArticleTitle('Director of Admissions job opening'), false);
   assert.equal(keepArticleTitle('Hiring a VP for Enrollment Strategy'), true);
@@ -136,6 +157,32 @@ test('feed ranks recent enrollment first and excludes stale publication dates', 
     const { articles } = await (await s.get('/api/articles')).json();
     assert.equal(articles[0].title, 'Enrollment update');
     assert.ok(!articles.some((a) => a.title === 'Old enrollment story'));
+  } finally {
+    server.close();
+  }
+});
+
+test('after the seven-day enrollment gate, source lane and date determine rank', async () => {
+  const { server, base, app } = bootApp();
+  try {
+    const s = await login(base);
+    const db = app.locals.db;
+    const now = new Date().toISOString();
+    const eightDaysAgo = new Date(Date.now() - 8 * 864e5).toISOString();
+    const insert = db.prepare(
+      'INSERT INTO articles (source, title, link, published_at, score, lane) VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    insert.run('National', 'Enrollment outlook', 'https://ex.com/old-enrollment', eightDaysAgo, 20, 'national');
+    insert.run('National', 'Fresh national item', 'https://ex.com/national', now, 0, 'national');
+    insert.run('Local', 'Fresh local item', 'https://ex.com/local', now, 0, 'local');
+    const { articles } = await (await s.get('/api/articles')).json();
+    assert.deepEqual(articles.slice(0, 3).map((article) => article.title), [
+      'Fresh local item',
+      'Fresh national item',
+      'Enrollment outlook',
+    ]);
+    const local = await (await s.get('/api/articles?lane=local')).json();
+    assert.deepEqual(local.articles.map((article) => article.title), ['Fresh local item']);
   } finally {
     server.close();
   }

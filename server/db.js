@@ -17,6 +17,7 @@ export function openDb(dataDir) {
       published_at TEXT,
       score INTEGER NOT NULL DEFAULT 0,
       starred INTEGER NOT NULL DEFAULT 0,
+      lane TEXT NOT NULL DEFAULT 'national',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -26,6 +27,7 @@ export function openDb(dataDir) {
       summary TEXT,
       tags TEXT NOT NULL DEFAULT '[]',
       article_id INTEGER REFERENCES articles(id),
+      source_context TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -34,6 +36,7 @@ export function openDb(dataDir) {
       id INTEGER PRIMARY KEY,
       text TEXT NOT NULL,
       done INTEGER NOT NULL DEFAULT 0,
+      source_context TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -71,22 +74,42 @@ export function openDb(dataDir) {
       source_context TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS brief_selections (
+      id INTEGER PRIMARY KEY,
+      body TEXT NOT NULL DEFAULT '',
+      source_context TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS feed_status (
+      source TEXT PRIMARY KEY,
+      lane TEXT NOT NULL DEFAULT 'national',
+      ok INTEGER NOT NULL DEFAULT 1,
+      error TEXT NOT NULL DEFAULT '',
+      checked_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
+  const addColumns = (table, additions) => {
+    const columns = new Set(db.prepare(`PRAGMA table_info(${table})`).all().map((column) => column.name));
+    for (const [name, definition] of Object.entries(additions)) {
+      if (!columns.has(name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`);
+    }
+  };
   // Existing installs predate these additive fields.
   if (!db.prepare('PRAGMA table_info(campaign_templates)').all().some((c) => c.name === 'html_body')) {
     db.exec("ALTER TABLE campaign_templates ADD COLUMN html_body TEXT NOT NULL DEFAULT ''");
   }
-  const campaignColumns = new Set(db.prepare('PRAGMA table_info(campaigns)').all().map((column) => column.name));
-  const additions = {
+  addColumns('articles', { lane: "TEXT NOT NULL DEFAULT 'national'" });
+  addColumns('notes', { source_context: "TEXT NOT NULL DEFAULT '{}'" });
+  addColumns('tasks', { source_context: "TEXT NOT NULL DEFAULT '{}'" });
+  addColumns('campaigns', {
     format: "TEXT NOT NULL DEFAULT 'text'",
     audience: "TEXT NOT NULL DEFAULT ''",
     sender: "TEXT NOT NULL DEFAULT ''",
     channel: "TEXT NOT NULL DEFAULT ''",
     deadline: "TEXT NOT NULL DEFAULT ''",
     source_context: "TEXT NOT NULL DEFAULT '{}'",
-  };
-  for (const [name, definition] of Object.entries(additions)) {
-    if (!campaignColumns.has(name)) db.exec(`ALTER TABLE campaigns ADD COLUMN ${name} ${definition}`);
-  }
+  });
   return db;
 }

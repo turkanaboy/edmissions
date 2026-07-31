@@ -2,6 +2,8 @@ import Parser from 'rss-parser';
 
 const UA = 'Mozilla/5.0 (compatible; EDMissions/0.1; personal dashboard)';
 const parser = new Parser();
+const LANE_RANK = { campus: 0, local: 1, suny: 2, national: 3 };
+const laneFor = (feed) => Object.hasOwn(LANE_RANK, feed.lane) ? feed.lane : 'national';
 
 export const stripHtml = (s) =>
   String(s || '')
@@ -41,6 +43,7 @@ export function normalizeItem(item, feed) {
   const link = item.link || item.guid || '';
   return {
     source: feed.name,
+    lane: laneFor(feed),
     title,
     // drop non-http(s) links at ingest so a hostile feed can't store a javascript: URL
     link: /^https?:\/\//i.test(link) ? link : '',
@@ -51,10 +54,16 @@ export function normalizeItem(item, feed) {
 
 export async function pollOnce(db, config) {
   const insert = db.prepare(
-    'INSERT OR IGNORE INTO articles (source, title, link, excerpt, published_at, score) VALUES (?, ?, ?, ?, ?, ?)'
+    'INSERT OR IGNORE INTO articles (source, lane, title, link, excerpt, published_at, score) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  );
+  const status = db.prepare(
+    `INSERT INTO feed_status (source, lane, ok, error, checked_at) VALUES (?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(source) DO UPDATE SET lane = excluded.lane, ok = excluded.ok,
+       error = excluded.error, checked_at = excluded.checked_at`
   );
   const results = { added: 0, failed: [] };
   for (const feed of config.content.feeds) {
+    const lane = laneFor(feed);
     try {
       const res = await fetch(feed.url, {
         headers: { 'User-Agent': UA },
@@ -66,12 +75,21 @@ export async function pollOnce(db, config) {
         const a = normalizeItem(item, feed);
         if (!a.title || !a.link || !keepArticleTitle(a.title)) continue;
         const score = scoreText(a.title, a.excerpt, config.content.keywords);
-        const info = insert.run(a.source, a.title, a.link, a.excerpt, a.published_at, score);
+        const info = insert.run(a.source, a.lane, a.title, a.link, a.excerpt, a.published_at, score);
         results.added += Number(info.changes);
+        if (!Number(info.changes)) {
+          const existing = db.prepare('SELECT lane FROM articles WHERE link = ?').get(a.link);
+          if (LANE_RANK[a.lane] < LANE_RANK[existing?.lane || 'national']) {
+            db.prepare('UPDATE articles SET source = ?, lane = ? WHERE link = ?').run(a.source, a.lane, a.link);
+          }
+        }
       }
+      status.run(feed.name, lane, 1, '');
     } catch (err) {
       // one dead or stalled feed never blocks the others
-      results.failed.push({ feed: feed.name, error: String(err.message || err) });
+      const message = String(err.message || err).slice(0, 300);
+      status.run(feed.name, lane, 0, message);
+      results.failed.push({ feed: feed.name, error: message });
       console.error(`[poller] ${feed.name}: ${err.message || err}`);
     }
   }

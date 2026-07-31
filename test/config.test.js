@@ -27,6 +27,7 @@ test('content config loads modes, feeds, keywords, subjects', () => {
   assert.ok(c.content.modes.intense.tags.length > 0);
   assert.ok(c.content.modes.chill.tags.includes('bluegrass'));
   assert.ok(c.content.feeds.length >= 4);
+  assert.deepEqual(new Set(c.content.feeds.map((feed) => feed.lane)), new Set(['campus', 'local', 'suny', 'national']));
   assert.ok(c.content.keywords.includes('fafsa'));
   assert.ok(c.content.subjects.includes('admissions'));
 });

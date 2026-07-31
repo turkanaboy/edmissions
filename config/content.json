@@ -5,12 +5,12 @@
     "chill": { "label": "Chill", "tags": ["lofi", "ambient", "chillout", "folk", "bluegrass"], "visual": "ambient" }
   },
   "feeds": [
-    { "name": "Inside Higher Ed", "url": "https://www.insidehighered.com/rss.xml" },
-    { "name": "Higher Ed Dive", "url": "https://www.highereddive.com/feeds/news/" },
-    { "name": "NPR Education", "url": "https://feeds.npr.org/1013/rss.xml" },
-    { "name": "EAB", "url": "https://eab.com/feed/" },
-    { "name": "The Chronicle", "url": "https://news.google.com/rss/search?q=site:chronicle.com+when:30d" },
-    { "name": "Times Higher Ed", "url": "https://news.google.com/rss/search?q=site:timeshighereducation.com+when:30d" }
+    { "name": "SUNY Delhi News", "lane": "campus", "url": "https://news.google.com/rss/search?q=site:delhi.edu+when:30d" },
+    { "name": "Delhi & Delaware County", "lane": "local", "url": "https://news.google.com/rss/search?q=%28site%3Adelcoreporter.com+OR+site%3Amountaineagle.net+OR+site%3Athedailystar.com%29+%28Delhi+OR+%22Delaware+County%22+OR+%22SUNY+Delhi%22%29+when%3A30d" },
+    { "name": "SUNY News", "lane": "suny", "url": "https://news.google.com/rss/search?q=site:suny.edu%2Fsuny-news+when:30d" },
+    { "name": "Inside Higher Ed", "lane": "national", "url": "https://www.insidehighered.com/rss.xml" },
+    { "name": "Higher Ed Dive", "lane": "national", "url": "https://www.highereddive.com/feeds/news/" },
+    { "name": "The Chronicle", "lane": "national", "url": "https://news.google.com/rss/search?q=site:chronicle.com+when:30d" }
   ],
   "keywords": [
     "enrollment", "admissions", "yield", "melt", "fafsa", "financial aid",

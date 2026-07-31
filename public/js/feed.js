@@ -1,7 +1,17 @@
 import { announce, api, el, mount, restoreFocus } from './app.js';
+import { openWorkbench } from './workbench.js';
+import { normalizeArticleSource } from './source-context.js';
 
 const root = document.getElementById('feed-root');
-const state = { starredOnly: false, articles: [], loading: true, error: null, polledOnEmpty: false };
+const state = { starredOnly: false, lane: 'all', articles: [], status: [], loading: true, error: null, polledOnEmpty: false };
+const lanes = [
+  ['all', 'All lanes'],
+  ['campus', 'SUNY Delhi'],
+  ['local', 'Local'],
+  ['suny', 'SUNY'],
+  ['national', 'National'],
+];
+const laneLabels = Object.fromEntries(lanes);
 let loadId = 0; // a fast All/Starred toggle or double-click can't let a stale response win
 
 async function load({ focusKey, announceResult = false } = {}) {
@@ -10,10 +20,13 @@ async function load({ focusKey, announceResult = false } = {}) {
   state.error = null;
   render(focusKey);
   try {
-    const qs = state.starredOnly ? '?starred=1' : '';
-    const data = await api('/api/articles' + qs);
+    const qs = new URLSearchParams();
+    if (state.starredOnly) qs.set('starred', '1');
+    if (state.lane !== 'all') qs.set('lane', state.lane);
+    const data = await api(`/api/articles${qs.size ? `?${qs}` : ''}`);
     if (myLoad !== loadId) return;
     state.articles = data.articles;
+    state.status = data.status || [];
     state.loading = false;
     // fresh instance: trigger the first poll ourselves instead of showing a blank panel
     if (!state.articles.length && !state.starredOnly && !state.polledOnEmpty) {
@@ -81,9 +94,15 @@ function articleRow(a) {
       'div',
       { class: 'meta' },
       el('span', { text: `${a.source}${fmtDate(a.published_at) ? ' · ' + fmtDate(a.published_at) : ''}` }),
+      el('span', { class: 'pill', style: 'margin-left:.45rem', text: laneLabels[a.lane] || 'National' }),
       a.score > 0 ? el('span', { class: 'pill badge', style: 'margin-left:.45rem', text: 'enrollment' }) : null
     ),
-    a.excerpt ? el('div', { class: 'meta muted', text: a.excerpt }) : null
+    a.excerpt ? el('div', { class: 'meta muted', text: a.excerpt }) : null,
+    el('button', {
+      class: 'text-button use-this',
+      text: 'Use this →',
+      onclick: (event) => openWorkbench(normalizeArticleSource(a), event.currentTarget),
+    })
   );
 }
 
@@ -98,7 +117,7 @@ function render(focusKey) {
         class: `pill${state.starredOnly ? '' : ' active'}`,
         'aria-pressed': String(!state.starredOnly),
         'data-focus': 'feed-all',
-        text: 'All',
+        text: 'Recent',
         onclick: () => {
           state.starredOnly = false;
           load({ focusKey: 'feed-all' });
@@ -118,6 +137,27 @@ function render(focusKey) {
       el('button', { class: 'btn btn-ghost', style: 'margin-left:auto', text: '↻', title: 'Refresh', 'aria-label': 'Refresh headlines', 'data-focus': 'feed-refresh', onclick: () => load({ focusKey: 'feed-refresh', announceResult: true }) })
     ),
     state.loading ? el('p', { class: 'muted', role: 'status', text: 'Fetching the latest headlines…' }) : null,
+    el('div', { class: 'feed-lanes', 'aria-label': 'Signal lanes' },
+      ...lanes.map(([value, label]) => el('button', {
+        type: 'button',
+        class: `pill${state.lane === value ? ' active' : ''}`,
+        'aria-pressed': String(state.lane === value),
+        'data-focus': `feed-lane-${value}`,
+        text: label,
+        onclick: () => {
+          state.lane = value;
+          load({ focusKey: `feed-lane-${value}` });
+        },
+      }))
+    ),
+    state.status.some((item) => !item.ok)
+      ? el('details', { class: 'feed-status' },
+          el('summary', { text: 'Source refresh issues' }),
+          ...state.status.filter((item) => !item.ok).map((item) =>
+            el('p', { class: 'muted', text: `${item.source}: ${item.error}` })
+          )
+        )
+      : null,
     state.error ? el('p', { class: 'error', role: 'alert', text: state.error }) : null,
     !state.loading && !state.error && !state.articles.length
       ? el('p', { class: 'muted', role: 'status', text: state.starredOnly ? 'Nothing starred yet.' : 'No recent headlines found.' })
