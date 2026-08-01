@@ -116,6 +116,14 @@ test('SUNY Delhi campus memory is seeded, editable, and included in handoff brie
     seedTemplates(app.locals.db, config);
     assert.equal((await (await s.get('/api/campaigns/campus')).json()).campus.name, 'SUNY Delhi');
 
+    app.locals.db
+      .prepare('UPDATE campus_profile SET name = ?, audience = ?, facts = ? WHERE id = 1')
+      .run('SUNY Delhi', 'Locally edited audience', 'Replace this seed with approved facts.');
+    seedTemplates(app.locals.db, config);
+    const repaired = (await (await s.get('/api/campaigns/campus')).json()).campus;
+    assert.match(repaired.facts, /SUNY DELHI KNOWLEDGE PACK/);
+    assert.equal(repaired.audience, 'Locally edited audience');
+
     const campus = {
       name: 'North Country Technical College',
       type: 'Public technical college',

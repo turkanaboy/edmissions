@@ -79,14 +79,14 @@ export function seedTemplates(db, config) {
       db.prepare(
         'INSERT INTO campus_profile (id, name, type, location, audience, voice, facts) VALUES (1, ?, ?, ?, ?, ?, ?)'
       ).run(...values);
-    } else if (
-      existing.name === 'Example Technical College' &&
-      existing.facts.startsWith('Replace this seed')
-    ) {
-      // Upgrade only the original placeholder; preserve any campus memory the user edited.
-      db.prepare(
-        'UPDATE campus_profile SET name = ?, type = ?, location = ?, audience = ?, voice = ?, facts = ? WHERE id = 1'
-      ).run(...values);
+    } else if (existing.facts.startsWith('Replace this seed')) {
+      if (existing.name === 'Example Technical College') {
+        db.prepare(
+          'UPDATE campus_profile SET name = ?, type = ?, location = ?, audience = ?, voice = ?, facts = ? WHERE id = 1'
+        ).run(...values);
+      } else {
+        db.prepare('UPDATE campus_profile SET facts = ? WHERE id = 1').run(campus.facts);
+      }
     }
   }
 }
