@@ -141,6 +141,12 @@ export function openDb(dataDir) {
       institution TEXT NOT NULL DEFAULT '',
       measure TEXT NOT NULL DEFAULT ''
     );
+
+    CREATE TABLE IF NOT EXISTS external_data (
+      key TEXT PRIMARY KEY,
+      payload TEXT NOT NULL,
+      retrieved_at TEXT NOT NULL
+    );
   `);
   // Slate web-service results are transient; remove snapshots from the retired CSV importer.
   db.prepare("DELETE FROM data_snapshots WHERE kind = 'slate'").run();

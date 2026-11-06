@@ -14,6 +14,7 @@ import { briefAssemblyRoutes, briefRoutes } from './routes/briefs.js';
 import { momentRoutes, seedMoments } from './routes/moments.js';
 import { dataRoutes } from './routes/data.js';
 import { createAi } from './openai.js';
+import { createPublicData } from './public-data.js';
 import { startPolling } from './poller.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -28,7 +29,7 @@ export function createApp(config = loadConfig()) {
   const auth = createAuth(config);
   app.locals.db = db;
   app.locals.config = config;
-  app.locals.ai = createAi(config);
+  app.locals.ai = createAi(config, null, createPublicData({ db, config }));
 
   app.use(express.json({ limit: '1mb' }));
 
@@ -52,6 +53,7 @@ export function createApp(config = loadConfig()) {
   app.get('/api/capabilities', (req, res) =>
     res.json({
       ai: Boolean(config.openAiKey),
+      slateAi: Boolean(config.openAiKey && config.slateAiApproved),
       subjects: config.content.subjects,
       audienceLanes: config.content.audienceLanes || [],
       welcome: req.user.toLowerCase() === 'nazely' ? 'Welcome AVP Nazely' : '',

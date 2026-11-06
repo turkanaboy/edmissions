@@ -42,6 +42,17 @@ export function briefRoutes() {
 const cleanLine = (value) => String(value || '').replace(/[\r\n]+/g, ' ').trim();
 const markdownLink = (label, url) => isWebUrl(url) ? `[${cleanLine(label).replace(/[\[\]]/g, '')}](${url})` : cleanLine(label);
 
+// Advisor answers carry a full memo plus sources. The Brief keeps the verdict and the links.
+function briefDetail(text) {
+  const [body, links] = String(text || '').split('\n\nLinks\n');
+  if (!links) return cleanLine(text);
+  const sources = links.split('\n').map((line) => {
+    const separator = line.lastIndexOf(': ');
+    return markdownLink(line.slice(0, separator), line.slice(separator + 2));
+  });
+  return `${cleanLine(body.split(/\n\s*\n/)[0])} Sources: ${sources.join(', ')}`;
+}
+
 export function assembleBrief(db) {
   const selections = db.prepare('SELECT * FROM brief_selections ORDER BY id DESC LIMIT 100').all().map(selectionRecord);
   const tasks = db.prepare('SELECT * FROM tasks WHERE done = 0 ORDER BY id DESC LIMIT 100').all()
@@ -62,7 +73,7 @@ export function assembleBrief(db) {
       const source = selection.source_context;
       const label = source.title || selection.body || 'Selected item';
       const detail = source.excerpt || selection.body;
-      return `- ${markdownLink(label, source.url)}${detail && detail !== label ? ` — ${cleanLine(detail)}` : ''}`;
+      return `- ${markdownLink(label, source.url)}${detail && detail !== label ? ` — ${briefDetail(detail)}` : ''}`;
     }) : ['- Nothing selected.']),
     '',
     '## Open tasks',

@@ -140,3 +140,23 @@ test('AVP Brief renders URL-less selections as plain text and stays authenticate
     server.close();
   }
 });
+
+test('AVP Brief reduces an advisor answer to its verdict and source links', async () => {
+  const { server, base } = bootApp();
+  try {
+    const s = await login(base);
+    const excerpt = [
+      "Verdict: Test first.\nDon't buy yet.",
+      'Who this reaches: A long section the Brief should leave out.',
+      'Sources\n- RN employment: 197,740 (NYC metro, 2025) BLS, retrieved 2026-11-05',
+      'Links\nU.S. Bureau of Labor Statistics, OEWS: https://www.bls.gov/oes/\nSUNY Delhi: https://www.delhi.edu/admission/',
+    ].join('\n\n');
+    await s.post('/api/brief-selections', { body: excerpt, source_context: { title: 'Subway ad?', excerpt } });
+    const { markdown } = await (await s.get('/api/brief')).json();
+    assert.match(markdown, /Subway ad\? — Verdict: Test first\. Don't buy yet\. Sources: \[U\.S\. Bureau of Labor Statistics, OEWS\]\(https:\/\/www\.bls\.gov\/oes\/\), \[SUNY Delhi\]\(https:\/\/www\.delhi\.edu\/admission\/\)/);
+    assert.doesNotMatch(markdown, /A long section/);
+    assert.doesNotMatch(markdown, /197,740/);
+  } finally {
+    server.close();
+  }
+});

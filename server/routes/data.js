@@ -3,6 +3,8 @@ import { Router } from 'express';
 const MAX_SLATE_BYTES = 1_000_000;
 const MAX_SLATE_ROWS = 1_000;
 const MAX_SLATE_REDIRECTS = 3;
+const MAX_ATTACHED_SLATE_ROWS = 300;
+const SMALL_CELL_THRESHOLD = 5;
 const SLATE_HOST_SUFFIXES = ['delhi.edu', 'technolutions.net'];
 const PERSON_LEVEL_COLUMNS = new Set(['id', 'guid', 'name']);
 const PERSON_LEVEL_COLUMN = /(^|_)(email|e_mail|ssn|social_?security(?:_?number)?|student_?(?:id|number)|emplid|person_?id|record_?id|first_?name|last_?name|full_?name|preferred_?name|birth_?date|date_?of_?birth|dob|phone(?:_?number)?|mobile|(?:street|mailing|home)_?address)(_|$)/;
@@ -177,6 +179,31 @@ const cellText = (value) => {
   return typeof value === 'object' ? JSON.stringify(value) : String(value);
 };
 
+// Validates a table the browser sends back for AI use, and hides small counts that could
+// identify a person. Rebuilt from the validated columns so nothing extra passes through.
+export function prepareSlateAttachment(table) {
+  if (!table || typeof table !== 'object' || !Array.isArray(table.columns) || !Array.isArray(table.rows)) {
+    throw new Error('Slate table is invalid');
+  }
+  if (table.rows.length > MAX_ATTACHED_SLATE_ROWS) {
+    throw new Error(`Attach ${MAX_ATTACHED_SLATE_ROWS} Slate rows or fewer; narrow the query to this question`);
+  }
+  if (!table.rows.every(Array.isArray)) throw new Error('Slate table is invalid');
+  const columns = assertAggregateColumns(table.columns.map(String));
+  const rows = table.rows.map((row) => row.map(cellText));
+  validateAggregateRows(columns, rows);
+  const suppressed = new Set(['count', 'prior_year_count'].map((column) => columns.indexOf(column)));
+  return {
+    columns,
+    rows: rows.map((row) => row.map((cell, position) => {
+      const value = Number(cell);
+      return suppressed.has(position) && cell.trim() && value >= 1 && value < SMALL_CELL_THRESHOLD
+        ? `<${SMALL_CELL_THRESHOLD}`
+        : cell;
+    })),
+  };
+}
+
 function tableFromJson(value) {
   const rows = Array.isArray(value)
     ? value
@@ -235,9 +262,9 @@ function parseSlateTable(text, contentType) {
   return tableFromCsv(text);
 }
 
-async function readLimitedText(response) {
+export async function readLimitedText(response, maxBytes = MAX_SLATE_BYTES) {
   const length = Number(response.headers.get('content-length') || 0);
-  if (length > MAX_SLATE_BYTES) throw new Error('Slate response must be 1 MB or smaller');
+  if (length > maxBytes) throw new Error('Slate response must be 1 MB or smaller');
   if (!response.body) return '';
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -247,7 +274,7 @@ async function readLimitedText(response) {
     const { value, done } = await reader.read();
     if (done) break;
     bytes += value.byteLength;
-    if (bytes > MAX_SLATE_BYTES) {
+    if (bytes > maxBytes) {
       await reader.cancel();
       throw new Error('Slate response must be 1 MB or smaller');
     }

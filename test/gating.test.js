@@ -14,7 +14,7 @@ const stubAi = {
   enabled: true,
   summarizeNote: async () => 'A tidy three-sentence summary.',
   generateCampaign: async (brief, count, format) => `Generated ${count} ${format} messages.\n\n${brief}`,
-  researchAnswer: async (question) => `Try an employer open house for: ${question}`,
+  researchAnswer: async (question) => ({ answer: `Try an employer open house for: ${question}`, evidence: [], sourceText: "" }),
 };
 
 test('AE1: without a key, capabilities is ai:false and AI endpoints 503', async () => {
@@ -109,7 +109,7 @@ test('HTML campaigns use the saved scaffold and research answers can be saved as
     researchAnswer: async (question, history, campus) => {
       receivedHistory = history;
       receivedCampus = campus;
-      return `Try an employer open house for: ${question}`;
+      return { answer: `Try an employer open house for: ${question}`, evidence: [], sourceText: "" };
     },
   };
   try {
@@ -164,6 +164,116 @@ test('AI failures return 502 without leaking detail', async () => {
     assert.equal(res.status, 502);
     assert.match((await res.json()).error, /AI request failed/);
     assert.equal((await s.post('/api/campaigns/generate', FORM)).status, 502);
+  } finally {
+    server.close();
+  }
+});
+
+const SLATE_COLUMNS = ['term', 'stage', 'program', 'residency', 'geography', 'source', 'count', 'prior_year_count', 'goal'];
+const slateRow = (count, prior = '40') => ['Fall 2026', 'Inquiry', 'Nursing', 'New York', 'Kings', 'Web', String(count), prior, ''];
+
+function bootResearch(env = {}, reply = {}) {
+  const booted = bootApp({ EDMISSIONS_OPENAPI_KEY: 'test-key', ...env });
+  const received = { calls: 0 };
+  booted.app.locals.ai = {
+    ...stubAi,
+    researchAnswer: async (question, history, campus, options) => {
+      received.calls += 1;
+      received.options = options;
+      return { answer: 'Test first.', evidence: [], sourceText: '', ...reply };
+    },
+  };
+  return { ...booted, received };
+}
+
+test('research responses carry evidence and flag figures that match no source', async () => {
+  const evidence = [{ label: 'RN employment', value: '197,740' }];
+  const { server, base } = bootResearch({}, {
+    answer: 'The metro has 197,740 RNs and fall 2026 starts. Your $60,000 quote needs 9 more. A vendor said $9,999.',
+    evidence,
+    sourceText: '{"value":"197,740"}',
+  });
+  try {
+    const s = await login(base);
+    const body = await (await s.post('/api/research/chat', { question: 'Is a $60,000 subway ad worth it?' })).json();
+    assert.deepEqual(body.evidence, evidence);
+    assert.deepEqual(body.unsourced_figures, ['$9,999']);
+    assert.equal(body.sourceText, undefined);
+  } finally {
+    server.close();
+  }
+});
+
+test('a figure from an earlier exchange is not flagged, and long advisor answers can be follow-up history', async () => {
+  const { server, base } = bootResearch({}, { answer: 'As noted, 197,740 RNs.' });
+  try {
+    const s = await login(base);
+    const response = await s.post('/api/research/chat', {
+      question: 'Follow up',
+      history: [{ question: 'First', answer: `197,740 RNs. ${'Context. '.repeat(1500)}` }],
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).unsourced_figures, []);
+  } finally {
+    server.close();
+  }
+});
+
+test('Slate attachment is refused unless approved, and the AI never sees it', async () => {
+  const { server, base, received } = bootResearch();
+  try {
+    const s = await login(base);
+    assert.equal((await (await s.get('/api/capabilities')).json()).slateAi, false);
+    const response = await s.post('/api/research/chat', {
+      question: 'Pipeline?',
+      slate: { columns: SLATE_COLUMNS, rows: [slateRow(40)] },
+    });
+    assert.equal(response.status, 403);
+    assert.equal(received.calls, 0);
+  } finally {
+    server.close();
+  }
+});
+
+test('an approved Slate attachment is suppressed before the AI sees it and is not stored', async () => {
+  const { server, base, app, received } = bootResearch({ EDMISSIONS_SLATE_AI_APPROVED: '1' }, {
+    answer: 'Kings shows 40 inquiries.',
+  });
+  try {
+    const s = await login(base);
+    assert.equal((await (await s.get('/api/capabilities')).json()).slateAi, true);
+    const body = await (await s.post('/api/research/chat', {
+      question: 'Pipeline?',
+      slate: { columns: SLATE_COLUMNS, rows: [slateRow(3, '4'), slateRow(40, '0'), slateRow(0, '')] },
+    })).json();
+    const { rows } = received.options.slateTable;
+    const countAt = SLATE_COLUMNS.indexOf('count');
+    const priorAt = SLATE_COLUMNS.indexOf('prior_year_count');
+    assert.deepEqual(rows.map((row) => row[countAt]), ['<5', '40', '0']);
+    assert.deepEqual(rows.map((row) => row[priorAt]), ['<5', '0', '']);
+    assert.deepEqual(body.unsourced_figures, []);
+    assert.equal(app.locals.db.prepare('SELECT COUNT(*) AS n FROM data_snapshots').get().n, 0);
+    assert.equal(app.locals.db.prepare('SELECT COUNT(*) AS n FROM data_points').get().n, 0);
+  } finally {
+    server.close();
+  }
+});
+
+test('a Slate attachment with person-level columns, too many rows, or bad cells is rejected before the AI', async () => {
+  const { server, base, received } = bootResearch({ EDMISSIONS_SLATE_AI_APPROVED: '1' });
+  try {
+    const s = await login(base);
+    const attempts = [
+      { columns: [...SLATE_COLUMNS.slice(0, 8), 'email'], rows: [slateRow(40)] },
+      { columns: SLATE_COLUMNS, rows: Array(301).fill(slateRow(40)) },
+      { columns: SLATE_COLUMNS, rows: [slateRow('many')] },
+      { columns: SLATE_COLUMNS, rows: ['not a row'] },
+      { rows: [] },
+    ];
+    for (const slate of attempts) {
+      assert.equal((await s.post('/api/research/chat', { question: 'Pipeline?', slate })).status, 400);
+    }
+    assert.equal(received.calls, 0);
   } finally {
     server.close();
   }

@@ -30,6 +30,29 @@ test('malformed EDMISSIONS_USERS throws', () => {
   assert.throws(() => loadConfig({ ...baseEnv, EDMISSIONS_USERS: 'nopair' }), /user:pass/);
 });
 
+test('advisor seed separates nursing offerings and gives every market its data keys', () => {
+  const { programs, markets, projectionsSource } = loadConfig({ ...baseEnv }).content.advisor;
+  const { offerings, soc, cip } = programs.nursing;
+  assert.ok(soc && cip);
+  assert.ok(offerings.some((offering) => /campus/i.test(offering.modality)));
+  assert.ok(offerings.some((offering) => /^online/i.test(offering.modality)));
+  for (const offering of offerings) {
+    assert.match(offering.url, /^https:\/\/www\.delhi\.edu\//);
+    assert.match(offering.verified_at, /^\d{4}-\d{2}-\d{2}$/);
+    assert.ok(offering.audience && offering.license_needed && offering.starts);
+  }
+  assert.ok(projectionsSource.regional_url && projectionsSource.statewide_url);
+  assert.ok(markets.nyc && markets.southern_tier && markets.statewide);
+  assert.ok(markets.southern_tier.counties.some((county) => county.name === 'Delaware'));
+  for (const [id, market] of Object.entries(markets)) {
+    assert.match(market.oews_area, /^[MS]\d{7}$/, id);
+    assert.ok(market.note, id);
+    assert.ok(market.projections.annual_openings > 0, id);
+    if (id !== 'statewide') assert.ok(market.counties.length > 0, id);
+    for (const county of market.counties) assert.match(county.fips, /^\d{3}$/, id);
+  }
+});
+
 test('content config loads modes, feeds, keywords, subjects', () => {
   const c = loadConfig({ ...baseEnv });
   assert.ok(c.content.modes.intense.tags.length > 0);
