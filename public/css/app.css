@@ -391,17 +391,24 @@ button.pill { appearance: none; background: transparent; cursor: pointer; }
 .chat-response { margin-top: 0.72rem; padding-top: 0.72rem; border-top: 1px solid var(--hairline); }
 .chat-response strong { display: block; margin-bottom: 0.35rem; font-size: 0.8rem; }
 .chat-response p { max-width: 72ch; margin-bottom: 0.5rem; white-space: pre-wrap; font-size: 0.84rem; }
+.research-attach { display: flex; align-items: flex-start; gap: 0.45rem; margin-top: 0.5rem; color: var(--dim); font-size: 0.76rem; }
+.research-attach input { flex: none; width: auto; margin-top: 0.15rem; }
+.research-sources { max-width: 72ch; margin-bottom: 0.5rem; font-size: 0.78rem; }
+.research-sources summary { cursor: pointer; font-weight: 600; }
+.research-sources ul { display: grid; gap: 0.3rem; margin: 0.4rem 0 0; padding-left: 1.1rem; overflow-wrap: anywhere; }
+.research-stale { color: var(--warning, oklch(0.82 0.15 85)); font-weight: 600; }
+.chat-response .research-unsourced { padding-left: 0.55rem; border-left: 2px solid var(--warning, oklch(0.82 0.15 85)); font-size: 0.76rem; }
 .notes-divider { display: flex; align-items: center; gap: 0.55rem; margin: 0.2rem 0 0.6rem; color: var(--dim); font-size: 0.72rem; }
 .notes-divider::after { content: ""; height: 1px; flex: 1; background: var(--hairline); }
 
 .workbench-dialog { width: min(680px, calc(100vw - 2rem)); max-height: min(760px, calc(100vh - 2rem)); padding: 0; color: var(--ink); background: oklch(0.16 0.05 300); border: 1px solid var(--purple-bright); border-radius: 16px; box-shadow: 0 24px 80px oklch(0.04 0.03 300 / 0.8); }
 .workbench-dialog::backdrop { background: oklch(0.04 0.03 300 / 0.78); backdrop-filter: blur(5px); }
-#workbench-root { display: grid; gap: 0.9rem; padding: 1.1rem; }
+#workbench-root { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.9rem; padding: 1.1rem; overflow-wrap: anywhere; }
 .workbench-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .workbench-heading h2 { margin: 0.08rem 0 0; font-size: 1.2rem; }
 .eyebrow { color: var(--purple-bright); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; }
 .workbench-source { display: grid; gap: 0.3rem; padding: 0.8rem; background: oklch(0.7 0.25 305 / 0.08); border: 1px solid var(--hairline); border-radius: 10px; }
-.workbench-source p { margin: 0; color: var(--dim); font-size: 0.82rem; }
+.workbench-source p { margin: 0; max-height: 40vh; overflow-y: auto; color: var(--dim); font-size: 0.82rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 .workbench-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; }
 .workbench-actions .btn:last-child { grid-column: 1 / -1; }
 .brief-queue { padding-top: 0.75rem; border-top: 1px solid var(--hairline); }

@@ -3,14 +3,18 @@ import {
   addResponse,
   buildResearchHandoff,
   clearResponse,
+  hasSlateData,
   markResponseSaved,
   recentResearchHistory,
 } from './research-chat-state.js';
 import { openWorkbench } from './workbench.js';
-import { normalizeResearchSource } from './source-context.js';
+import { normalizeResearchSource, questionContext, researchSourcesText } from './source-context.js';
+import { currentSlateTable } from './data.js';
 
 const root = document.getElementById('notes-root');
-const state = { notes: [], filterTag: null, editing: null, busy: false, error: null, question: '', chat: [] };
+// The research route rejects longer questions, and "Use this" excerpts can be 4,000 characters.
+const MAX_PREFILL_CONTEXT = 1200;
+const state = { notes: [], filterTag: null, editing: null, busy: false, error: null, question: '', chat: [], attachSlate: false };
 // read at render time, not module-eval time — capabilities is filled during app init
 const subjects = () => capabilities.subjects || [];
 
@@ -75,6 +79,32 @@ async function summarize(note) {
   }
 }
 
+const attachableSlate = () => (capabilities.slateAi ? currentSlateTable() : null);
+
+function responseProvenance(item) {
+  return [
+    item.evidence.length
+      ? el('details', { class: 'research-sources' },
+          el('summary', { text: `Sources (${item.evidence.length})` }),
+          el('ul', {}, ...item.evidence.map((source) => el('li', {},
+            el('span', { text: `${source.label}: ${source.value}` }),
+            el('span', { class: 'muted', text: ` ${[source.geography, source.period].filter(Boolean).join(', ')}. Retrieved ${String(source.retrieved_at).slice(0, 10)}. ` }),
+            el('a', { href: source.url, target: '_blank', rel: 'noopener noreferrer', text: `${source.publisher} ↗` }),
+            source.stale
+              ? el('span', { class: 'research-stale', text: ' Stale: the latest refresh failed.' })
+              : null
+          )))
+        )
+      : null,
+    item.unsourced.length
+      ? el('p', {
+          class: 'research-unsourced',
+          text: `Not from a source, and may be the advisor's arithmetic. Verify before using: ${item.unsourced.join(', ')}`,
+        })
+      : null,
+  ];
+}
+
 async function askResearch() {
   const question = state.question.trim();
   if (!question || state.busy) return;
@@ -83,12 +113,18 @@ async function askResearch() {
   render('research-question');
   let added = false;
   try {
-    const { answer } = await api('/api/research/chat', {
+    const slate = state.attachSlate ? attachableSlate() : null;
+    const { answer, ...provenance } = await api('/api/research/chat', {
       method: 'POST',
-      body: JSON.stringify({ question, history: recentResearchHistory(state.chat) }),
+      body: JSON.stringify({
+        question,
+        history: recentResearchHistory(state.chat),
+        ...(slate ? { slate: { columns: slate.columns, rows: slate.rows } } : {}),
+      }),
     });
-    state.chat = addResponse(state.chat, question, answer);
+    state.chat = addResponse(state.chat, question, answer, { ...provenance, usedSlate: Boolean(slate) });
     state.question = '';
+    state.attachSlate = false;
     added = true;
   } catch (err) {
     state.error = `Research failed: ${err.message}`;
@@ -107,7 +143,10 @@ async function saveAnswer(item) {
   render(`research-clear-${itemIndex}`);
   const saved = await api('/api/notes', {
     method: 'POST',
-    body: JSON.stringify({ body: `${item.question}\n\n${item.answer}`, tags: ['admissions'] }),
+    body: JSON.stringify({
+      body: [item.question, item.answer, researchSourcesText(item.evidence)].filter(Boolean).join('\n\n'),
+      tags: ['admissions'],
+    }),
   }).catch(() => null);
   if (!saved) {
     item.saving = false;
@@ -159,11 +198,16 @@ document.addEventListener('edm:prefill-research', (event) => {
     source.publisher ? `Publisher: ${source.publisher}` : '',
     source.published_at ? `Published: ${source.published_at}` : '',
     source.lane ? `Source lane: ${source.lane}` : '',
-    source.excerpt ? `Context: ${source.excerpt}` : '',
+    source.excerpt ? `Context: ${questionContext(source.excerpt, MAX_PREFILL_CONTEXT)}` : '',
     source.url ? `Source: ${source.url}` : '',
   ].filter(Boolean).join('\n');
   state.question = state.question ? `${state.question}\n\n${prompt}` : prompt;
   render('research-question');
+});
+
+document.addEventListener('edm:slate-updated', () => {
+  state.attachSlate = false;
+  if (!state.editing) render();
 });
 
 function editorView() {
@@ -265,11 +309,23 @@ function listView() {
             }),
             el('button', { class: 'btn btn-neon', 'data-focus': 'research-ask', text: state.busy === 'chat' ? 'Thinking…' : 'Ask', disabled: state.busy ? '' : undefined, onclick: askResearch })
           ),
-          state.busy === 'chat' ? el('p', { class: 'muted', role: 'status', text: 'Researching…' }) : null,
+          attachableSlate()
+            ? el('label', { class: 'research-attach' },
+                el('input', {
+                  type: 'checkbox',
+                  'data-focus': 'research-attach',
+                  checked: state.attachSlate ? '' : undefined,
+                  onchange: (e) => (state.attachSlate = e.target.checked),
+                }),
+                el('span', { text: `Attach Slate table (${attachableSlate().row_count} rows) to this question. It goes to OpenAI with small counts hidden, and isn't saved here.` })
+              )
+            : null,
+          state.busy === 'chat' ? el('p', { class: 'muted', role: 'status', text: 'Researching. Answers that pull data can take a couple of minutes.' }) : null,
           state.error ? el('p', { class: 'error', role: 'alert', text: state.error }) : null,
           ...state.chat.map((item, index) => el('article', { class: 'chat-response' },
             el('strong', { text: item.question }),
             el('p', { text: item.answer }),
+            ...responseProvenance(item),
             el('div', { class: 'row' },
               el('button', {
                 class: 'btn btn-ghost',
@@ -305,9 +361,15 @@ function listView() {
                   'data-focus': 'research-handoff',
                   text: 'Continue in ChatGPT ↗',
                   title: 'Copy this conversation and open a new ChatGPT chat',
+                  disabled: hasSlateData(state.chat) ? '' : undefined,
                   onclick: continueInChatGpt,
                 }),
-                el('span', { class: 'muted', text: 'Copies this chat so you can paste it there.' })
+                el('span', {
+                  class: 'muted',
+                  text: hasSlateData(state.chat)
+                    ? 'Unavailable because this chat used Slate data. Clear those responses to continue there.'
+                    : 'Copies this chat so you can paste it there.',
+                })
               )
             : null
         )

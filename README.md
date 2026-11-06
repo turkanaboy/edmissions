@@ -37,6 +37,28 @@ hidden and everything else works. AI requests use the Responses API with
 SUNY Delhi campus knowledge is seeded from approved official pages and reused in
 campaigns and research answers.
 
+### Research advisor
+
+For nursing, the research desk answers budget and channel questions using public data, with
+its sources listed under each answer. It uses BLS, NY Department of Labor, IPEDS (through the
+Urban Institute), SUNY, and Census data. Responses are cached for 7 days. A source that fails
+falls back to its last saved value, marked stale, or is reported as unavailable. NY Department
+of Labor projections and program facts are seeded under `advisor` in `config/content.json`, so
+re-verify them when those sources update. Projections are updated every other year.
+
+- `EDMISSIONS_CENSUS_KEY`: Free [Census key](https://api.census.gov/data/key_signup.html). Census figures stay unavailable without it.
+- `EDMISSIONS_BLS_KEY`: Optional free [BLS key](https://data.bls.gov/registrationEngine/) for higher daily limits.
+- `EDMISSIONS_SLATE_AI_APPROVED=1`: Lets a user attach a fetched Slate table to one question.
+  Set it only after SUNY Delhi approves sending Slate aggregates to OpenAI. The table is not
+  stored, and counts of 1 to 4 are hidden, but an answer can repeat its numbers and a saved
+  note keeps them. Totals can also reveal a hidden count.
+
+To judge advice quality against the live model and data (this uses real API credits):
+
+```bash
+node --env-file=.env scripts/advisor-eval.mjs
+```
+
 ### Data Command Center
 
 The dashboard can fetch an aggregate Slate query on demand and refresh a cached
@@ -106,6 +128,8 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        # Research answers that pull data can take up to 150 seconds.
+        proxy_read_timeout 180s;
     }
 }
 ```

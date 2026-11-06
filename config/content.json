@@ -162,6 +162,156 @@
       "verified_at": "2026-07-30"
     }
   ],
+  "advisor": {
+    "ipeds_unitid": 196024,
+    "programs": {
+      "nursing": {
+        "label": "Nursing",
+        "soc": "291141",
+        "soc_title": "Registered Nurses",
+        "cip": 513801,
+        "cip_title": "Registered Nursing",
+        "landing_page": "https://www.delhi.edu/digitalads/nursing-online/",
+        "offerings": [
+          {
+            "id": "aas",
+            "name": "Nursing AAS (pre-licensure)",
+            "modality": "On campus in Delhi, NY, with labs, simulation, and clinical experiences at regional partners",
+            "audience": "People who want to become RNs and can study in Delhi",
+            "license_needed": "No RN license needed; prepares graduates for NCLEX-RN licensure",
+            "starts": "Fall only",
+            "url": "https://www.delhi.edu/academics/majors-programs/associates/nursing/index.php",
+            "verified_at": "2026-11-05"
+          },
+          {
+            "id": "dual_degree",
+            "name": "Nursing dual degree (AAS and BSN)",
+            "modality": "Three years in person with clinical rotations, then an online final year",
+            "audience": "Students entering from high school; ranked by high school grades and TEAS score",
+            "license_needed": "No RN license needed to enter; students sit for NCLEX-RN after the third year",
+            "starts": "Fall only; February 1 preferred deadline",
+            "url": "https://www.delhi.edu/academics/majors-programs/bachelors/nursing-dual-degree/index.php",
+            "verified_at": "2026-11-05"
+          },
+          {
+            "id": "rn_to_bsn",
+            "name": "RN-to-BSN (online)",
+            "modality": "Online with seven-week terms; some practicum work is completed in the student's home community",
+            "audience": "Working registered nurses with an associate degree in nursing",
+            "license_needed": "Designed for working RNs; admission requires an associate degree in nursing and a 2.6 GPA",
+            "starts": "August, October, January, March, and May",
+            "url": "https://www.delhi.edu/academics/online/rn-bsn/index.php",
+            "verified_at": "2026-11-05"
+          },
+          {
+            "id": "ms_nursing",
+            "name": "MS in Nursing Administration or Nursing Education, and post-graduate certificates (online)",
+            "modality": "Online",
+            "audience": "Licensed RNs moving into leadership or teaching",
+            "license_needed": "Unencumbered RN license",
+            "starts": "Check the current program page",
+            "url": "https://www.delhi.edu/academics/online/nursing-administration/index.php",
+            "verified_at": "2026-11-05"
+          }
+        ],
+        "tuition": {
+          "label": "Online undergraduate tuition per credit",
+          "value": "$295 in state, $353 out of state, plus a $17.45 per-credit fee",
+          "note": "The page names no academic year, so confirm with Student Accounts before relying on it.",
+          "url": "https://www.delhi.edu/admission/tuition-fees/online/index.php",
+          "verified_at": "2026-11-05"
+        },
+        "policy": {
+          "label": "New York BSN in 10 law",
+          "value": "RNs licensed after June 18, 2020 need a baccalaureate within 10 years; RNs licensed on or before that date are exempt; the earliest deadline is June 19, 2030",
+          "publisher": "New York State Education Department",
+          "url": "https://www.op.nysed.gov/professions/registered-professional-nursing/new-york-state-bsn-in-10-law",
+          "verified_at": "2026-11-05"
+        }
+      }
+    },
+    "markets": {
+      "nyc": {
+        "label": "New York City",
+        "oews_area": "M0035620",
+        "oews_label": "New York-Newark-Jersey City, NY-NJ metro",
+        "note": "BLS figures cover a metro area that extends past the five boroughs into New Jersey and suburban New York. NY DOL and county figures cover the five boroughs only.",
+        "counties": [
+          { "fips": "005", "name": "Bronx" },
+          { "fips": "047", "name": "Kings" },
+          { "fips": "061", "name": "New York" },
+          { "fips": "081", "name": "Queens" },
+          { "fips": "085", "name": "Richmond" }
+        ],
+        "projections": { "period": "2022-2032", "base": 86760, "projected": 108360, "annual_openings": 7410, "median_wage": 127612.98 }
+      },
+      "southern_tier": {
+        "label": "Southern Tier (includes Delaware County)",
+        "oews_area": "M0013780",
+        "oews_label": "Binghamton, NY metro",
+        "note": "BLS figures cover only the Binghamton metro. Delaware County falls outside it and has no county-level occupational data.",
+        "counties": [
+          { "fips": "007", "name": "Broome" },
+          { "fips": "015", "name": "Chemung" },
+          { "fips": "017", "name": "Chenango" },
+          { "fips": "025", "name": "Delaware" },
+          { "fips": "097", "name": "Schuyler" },
+          { "fips": "101", "name": "Steuben" },
+          { "fips": "107", "name": "Tioga" },
+          { "fips": "109", "name": "Tompkins" }
+        ],
+        "projections": { "period": "2022-2032", "base": 5600, "projected": 6990, "annual_openings": 479, "median_wage": 101501.96 }
+      },
+      "capital": {
+        "label": "Capital Region",
+        "oews_area": "M0010580",
+        "oews_label": "Albany-Schenectady-Troy, NY metro",
+        "note": "BLS figures cover the Albany metro, which is smaller than the eight-county region.",
+        "counties": [
+          { "fips": "001", "name": "Albany" },
+          { "fips": "021", "name": "Columbia" },
+          { "fips": "039", "name": "Greene" },
+          { "fips": "083", "name": "Rensselaer" },
+          { "fips": "091", "name": "Saratoga" },
+          { "fips": "093", "name": "Schenectady" },
+          { "fips": "113", "name": "Warren" },
+          { "fips": "115", "name": "Washington" }
+        ],
+        "projections": { "period": "2022-2032", "base": 12120, "projected": 14720, "annual_openings": 990, "median_wage": 102412.76 }
+      },
+      "hudson_valley": {
+        "label": "Hudson Valley",
+        "oews_area": "M0028880",
+        "oews_label": "Kiryas Joel-Poughkeepsie-Newburgh, NY metro",
+        "note": "BLS figures cover the Poughkeepsie-Newburgh metro. Westchester, Rockland, and Putnam fall in the New York City metro.",
+        "counties": [
+          { "fips": "027", "name": "Dutchess" },
+          { "fips": "071", "name": "Orange" },
+          { "fips": "079", "name": "Putnam" },
+          { "fips": "087", "name": "Rockland" },
+          { "fips": "105", "name": "Sullivan" },
+          { "fips": "111", "name": "Ulster" },
+          { "fips": "119", "name": "Westchester" }
+        ],
+        "projections": { "period": "2022-2032", "base": 19660, "projected": 24480, "annual_openings": 1662, "median_wage": 119900.97 }
+      },
+      "statewide": {
+        "label": "New York State",
+        "oews_area": "S3600000",
+        "oews_label": "New York State",
+        "note": "NY DOL statewide projections use a later period than its regional projections, so do not add regions and compare them to this total.",
+        "counties": [],
+        "projections": { "period": "2024-2034", "base": 206530, "projected": 221180, "annual_openings": 12085, "median_wage": 112503.54 }
+      }
+    },
+    "projectionsSource": {
+      "publisher": "New York State Department of Labor",
+      "wage_year": "2026",
+      "regional_url": "https://dol.ny.gov/statistics-regional-long-term-occupational-projections",
+      "statewide_url": "https://dol.ny.gov/statistics-statewide-long-term-occupational-projections",
+      "verified_at": "2026-11-05"
+    }
+  },
   "defaultCampus": {
     "name": "SUNY Delhi",
     "type": "Public SUNY college of technology",

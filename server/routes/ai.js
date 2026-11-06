@@ -8,7 +8,9 @@ import {
   renderTemplate,
   validateCampaignInput,
 } from './campaigns.js';
+import { prepareSlateAttachment } from './data.js';
 import { NOTE_JOIN, parseNote } from './notes.js';
+import { findUnsourcedFigures } from '../public-data.js';
 
 // Errors are logged as metadata only — never the note or campaign text (it can carry
 // financial-aid / student-record content).
@@ -57,16 +59,38 @@ export function aiRoutes() {
       question: String(item?.question || '').trim(),
       answer: String(item?.answer || '').trim(),
     }));
-    if (cleanHistory.some((item) => !item.question || !item.answer || item.question.length > 2000 || item.answer.length > 10000)) {
+    if (cleanHistory.some((item) => !item.question || !item.answer || item.question.length > 2000 || item.answer.length > 40000)) {
       return res.status(400).json({ error: 'Research history is invalid' });
     }
+    let slateTable = null;
+    if (req.body?.slate) {
+      if (!req.app.locals.config.slateAiApproved) {
+        return res.status(403).json({ error: 'Sending Slate data to AI is not approved on this instance' });
+      }
+      try {
+        slateTable = prepareSlateAttachment(req.body.slate);
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
+    }
     try {
+      const campus = campusContext(req.app.locals.db);
+      const { answer, evidence, sourceText } = await req.app.locals.ai.researchAnswer(
+        question,
+        cleanHistory,
+        campus,
+        { slateTable }
+      );
       res.json({
-        answer: await req.app.locals.ai.researchAnswer(
+        answer,
+        evidence,
+        unsourced_figures: findUnsourcedFigures(answer, [
+          sourceText,
           question,
-          cleanHistory,
-          campusContext(req.app.locals.db)
-        ),
+          campus,
+          JSON.stringify(cleanHistory),
+          JSON.stringify(slateTable),
+        ]),
       });
     } catch (err) {
       logAiError('research chat', null, err);

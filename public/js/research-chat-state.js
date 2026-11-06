@@ -1,7 +1,19 @@
-export const addResponse = (chat, question, answer) => [
+// A figure flagged earlier stays flagged when repeated, because follow-ups count the
+// conversation as a source. Slate use carries forward since history can repeat its numbers.
+export const addResponse = (chat, question, answer, { evidence = [], unsourced_figures: unsourced = [], usedSlate = false } = {}) => [
   ...chat,
-  { question, answer, saved: false, saving: false },
+  {
+    question,
+    answer,
+    evidence,
+    unsourced: [...new Set([...unsourced, ...chat.flatMap((item) => item.unsourced || []).filter((figure) => answer.includes(figure))])],
+    usedSlate: usedSlate || chat.some((item) => item.usedSlate),
+    saved: false,
+    saving: false,
+  },
 ];
+
+export const hasSlateData = (chat) => chat.some((item) => item.usedSlate);
 
 export const markResponseSaved = (chat, target) =>
   chat.map((item) => (item === target ? { ...item, saved: true, saving: false } : item));

@@ -1,6 +1,6 @@
 # EDMissions Product Backlog
 
-Updated: July 30, 2026
+Updated: November 5, 2026
 
 This backlog keeps EDMissions focused as a personal communications dashboard for SUNY Delhi. Items are ordered by usefulness and dependency, not by implementation size.
 
@@ -111,6 +111,7 @@ The first version should answer useful enrollment questions without becoming a s
 
 2. **Program Opportunity**
    Connect SUNY Delhi programs to New York occupational demand, projected openings, wages, and typical education requirements.
+   **First slice in progress:** the research desk advises on nursing decisions with sourced data ([plan](docs/plans/2026-11-05-001-feat-research-hub-nursing-advisor-plan.md)).
 
 3. **Market Opportunity**
    Show relevant county and regional demographics, educational attainment, migration, high-school origin, and adult-learner indicators.

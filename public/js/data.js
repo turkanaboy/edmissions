@@ -47,6 +47,8 @@ async function load() {
   render();
 }
 
+export const currentSlateTable = () => state.slate;
+
 async function fetchSlate(event) {
   event.preventDefault();
   state.busy = 'slate';
@@ -59,6 +61,7 @@ async function fetchSlate(event) {
     });
     state.busy = '';
     render();
+    document.dispatchEvent(new CustomEvent('edm:slate-updated'));
     announce(`Fetched ${state.slate.row_count} aggregate Slate rows.`);
   } catch (error) {
     state.busy = '';
